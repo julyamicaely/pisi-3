@@ -5,12 +5,14 @@ import numpy as np
 import plotly.express as px
 import plotly.io as pio
 from io import StringIO
+from scipy.stats import chi2_contingency
+
 
 # ====== Template (evita bug de template em algumas versões) ======
 pio.templates.default = "plotly_white"
 
 # ====== Carregamento e preparação dos dados ======
-df = pd.read_csv('cardio_data.csv')
+df = pd.read_parquet('cardio_data.parquet')
 
 # Idade em anos (era em dias)
 df['age_years'] = df['age'] / 365
@@ -69,6 +71,26 @@ if 'weight' in df.columns:
 else:
     sanity_lines.append('weight: coluna ausente')
 sanity_text = "Checagens de sanidade (contagens de violações):\n" + "\n".join(f" - {line}" for line in sanity_lines)
+
+# ====== Função Cramér's V ======
+
+#Função para calcular Cramér’s V
+def cramers_v(x, y):
+    confusion_matrix = pd.crosstab(x, y)
+    chi2 = chi2_contingency(confusion_matrix, correction=False)[0]
+    n = confusion_matrix.sum().sum()
+    r, k = confusion_matrix.shape
+    return np.sqrt(chi2 / (n * (min(k-1, r-1))))
+
+#Função para gerar a matriz de Cramér’s V
+def cramers_v_matrix(df, cat_cols):
+    v_matrix = pd.DataFrame(index=cat_cols, columns=cat_cols, dtype=float)
+    for col1 in cat_cols:
+        for col2 in cat_cols:
+            v_matrix.loc[col1, col2] = cramers_v(df[col1], df[col2])
+    return v_matrix
+cat_columns = ['gender_label', 'smoke', 'alco', 'active', 'cardio', 'chol_label', 'gluc_label']
+
 
 # ====== App ======
 app = Dash()
@@ -183,7 +205,23 @@ app.layout = html.Div([
         style={'maxWidth': '420px'}
     ),
     dcc.Graph(id='graph-cat-by-age'),
+    
+    html.Hr(),
+    html.H3("9) Heatmap de Cramér's V — associações entre variáveis binárias/categóricas"),
+    html.P("Selecione as variáveis que deseja comparar:"),
+    dcc.Checklist(
+        id='cramers-vars',
+        options=[{'label': c, 'value': c} for c in ['gender_label','smoke','alco','active','cardio','chol_label','gluc_label']],
+        value=['gender_label','smoke','alco','active','cardio','chol_label','gluc_label'],
+        inline=True 
+    ),
+    html.Div(
+        dcc.Graph(id='cramers-heatmap'),
+        style={'display': 'flex', 'justify-content': 'center', 'width': '90%'}
+    )
+
 ])
+
 
 # ====== Cores e ordem comuns ======
 COLOR_MAP = {'Masculino': '#93c5fd', 'Feminino': '#d8b4fe'}  # azul claro / roxo claro
@@ -482,6 +520,30 @@ def update_graph_cat_by_age(var_key, cat_value):
             '<extra></extra>'
         )
     )
+    return fig
+
+# ====== Callback: atualizar o heatmap
+@callback(
+    Output('cramers-heatmap', 'figure'),
+    Input('cramers-vars', 'value')
+)
+def update_cramers_heatmap(cols):
+    if len(cols) < 2:
+        return px.imshow([[0]], text_auto=True, title="Selecione pelo menos 2 variáveis")
+    
+    v_matrix = pd.DataFrame(index=cols, columns=cols, dtype=float)
+    for i, col1 in enumerate(cols):
+        for j, col2 in enumerate(cols):
+            if i <= j:  # só metade superior + diagonal
+                v = cramers_v(df[col1], df[col2])
+                v_matrix.loc[col1, col2] = v
+                v_matrix.loc[col2, col1] = v
+    fig = px.imshow(v_matrix.astype(float), text_auto=True,
+                    labels=dict(x="Variável", y="Variável", color="Cramér's V"),
+                    title="Heatmap de Cramér's V",
+                    zmin=0, zmax=1)  # escala de 0 a 1
+    size = max(800, len(cols)*150)  # 150 px por coluna, mínimo 800
+    fig.update_layout(width=size, height=size)
     return fig
 
 # ====== Run ======
