@@ -1,0 +1,19 @@
+RELATÓRIO DE CLUSTERIZAÇÃO - 2 CLUSTERS
+==================================================
+
+Silhouette Score: 0.2142
+Total de pacientes: 68157
+
+DISTRIBUIÇÃO:
+Cluster 0: 23969 pacientes (35.2%)
+Cluster 1: 44188 pacientes (64.8%)
+
+INTERPRETAÇÃO SUGERIDA:
+• Cluster 0: Perfil de menor risco cardiovascular
+• Cluster 1: Perfil de maior risco cardiovascular
+
+PRINCIPAIS DIFERENÇAS:
+- age_years: -3.33
+- ap_hi: -24.95
+- weight: -11.85
+- cholesterol: -0.42

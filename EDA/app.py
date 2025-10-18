@@ -12,10 +12,7 @@ from scipy.stats import chi2_contingency
 pio.templates.default = "plotly_white"
 
 # ====== Carregamento e preparação dos dados ======
-df = pd.read_parquet('cardio_data.parquet')
-
-# Idade em anos (era em dias)
-df['age_years'] = df['age'] / 365
+df = pd.read_parquet('./EDA/cardio_data.parquet')
 
 # Gênero legível
 df['gender_label'] = df['gender'].map({1: 'Feminino', 2: 'Masculino'}).astype('category')
