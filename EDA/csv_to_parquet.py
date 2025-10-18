@@ -1,8 +1,8 @@
 import pandas as pd
 
 # Arquivos
-csv_file = 'cardio_data.csv'
-parquet_file = 'cardio_data.parquet'
+csv_file = './EDA/cardio_data.csv'
+parquet_file = './EDA/cardio_data.parquet'
 
 # Ler CSV e salvar em Parquet
 df = pd.read_csv(csv_file)
