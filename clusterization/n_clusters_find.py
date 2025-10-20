@@ -51,5 +51,3 @@ ax2.set_ylabel('Silhouette Score')
 ax2.set_title('Silhouette Score')
 
 plt.show()
-
-

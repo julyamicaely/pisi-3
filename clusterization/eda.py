@@ -16,11 +16,10 @@ bp_category_order = {
 df['bp_category_encoded'] = df['bp_category'].map(bp_category_order)
 
 df_clean = df.copy()
-# Limpar outliers na pressão arterial e em altura/peso
-df_clean = df[(df['ap_hi'] >= 80) & (df['ap_hi'] <= 250)]
-df_clean = df[(df['ap_lo'] >= 50) & (df['ap_lo'] <= 150)]
-df_clean = df[(df['height'] >= 120) & (df['height'] <= 220)]
-df_clean = df[(df['weight'] >= 40) & (df['weight'] <= 200)]
+df_clean = df_clean[(df_clean['ap_hi'] >= 80) & (df_clean['ap_hi'] <= 250)]
+df_clean = df_clean[(df_clean['ap_lo'] >= 50) & (df_clean['ap_lo'] <= 150)]
+df_clean = df_clean[(df_clean['height'] >= 120) & (df_clean['height'] <= 220)]
+df_clean = df_clean[(df_clean['weight'] >= 40) & (df_clean['weight'] <= 200)]
 
 parquet_file = './clusterization/cardio_data_processed.parquet'
 df_clean.to_parquet(parquet_file, index=False)
