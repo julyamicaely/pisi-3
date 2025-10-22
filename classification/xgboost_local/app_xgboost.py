@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import xgboost as xgb
@@ -10,7 +11,8 @@ from dash import Dash, html, dcc, dash_table, Input, Output
 # =======================================================
 # 1. Carregamento e pré-processamento
 # =======================================================
-DATA_PATH = "../../EDA/cardio_data.parquet"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))  # sobe 3 níveis até pisi-3
+DATA_PATH = os.path.join(BASE_DIR, "EDA", "cardio_data.parquet")
 
 def load_data():
     df = pd.read_parquet(DATA_PATH)
