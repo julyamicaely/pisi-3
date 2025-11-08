@@ -27,7 +27,7 @@ print(f'Arquivo convertido com sucesso: {parquet_file}')
 
 # Selecionar colunas para clusterização
 clustering_cols = [
-    'age_years', 'gender', 'height', 'weight', 'ap_hi', 'ap_lo', 
+    'age_years', 'gender', 'height', 'weight', 'bmi', 'ap_hi', 'ap_lo', 
     'cholesterol', 'gluc', 'smoke', 'alco', 'active'
 ]
 df_cluster = df_clean[clustering_cols].copy()
