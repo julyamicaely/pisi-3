@@ -68,7 +68,8 @@ def preprocess_data():
     # Remover colunas irrelevantes ou duplicadas
     cols_to_drop = [
         "age",              # já temos age_years
-        "bp_category",      # categórica textual, já temos bp_category_encoded
+        "bp_category",      # categórica textual
+        "bp_category_encoded",  # redundante com ap_hi e ap_lo
         "cholesterol",      # substituído por cholesterol_high
         "gluc"              # substituído por gluc_high
     ]
