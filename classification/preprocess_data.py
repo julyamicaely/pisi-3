@@ -148,3 +148,71 @@ def preprocess_data():
     print(f"📊 Features finais: {feature_names}")
 
     return X_train_bal, X_test_scaled, y_train_bal, y_test, scaler, label_encoders, feature_names
+
+
+def load_and_preprocess_data():
+    """
+    Carrega o dataset completo do Kaggle e aplica o mesmo pré-processamento
+    usado no treinamento. Útil para dashboards e análises.
+    
+    Esta função elimina duplicação de código ao centralizar toda a lógica
+    de transformação de dados (features derivadas + escalonamento).
+    
+    Returns:
+        tuple: (X_scaled, X_original, y, feature_names)
+            - X_scaled: Features escalonadas (para predição)
+            - X_original: Features originais (para visualização/filtros)
+            - y: Labels (cardio)
+            - feature_names: Lista dos nomes das features
+    """
+    import os
+    import pandas as pd
+    import joblib
+    from pathlib import Path
+    
+    base_path = Path(__file__).parent.parent
+    
+    # Carregar dataset
+    dataset_path = base_path / "EDA" / "cardio_data.parquet"
+    if not dataset_path.exists():
+        dataset_path = base_path / "EDA" / "cardio_data.csv"
+    
+    if dataset_path.suffix == '.parquet':
+        df = pd.read_parquet(dataset_path)
+    else:
+        df = pd.read_csv(dataset_path)
+    
+    # Carregar scaler salvo
+    scaler_path = base_path / "classification" / "scalers" / "robust_scaler.joblib"
+    if not scaler_path.exists():
+        raise FileNotFoundError(f"Scaler não encontrado em {scaler_path}")
+    
+    scaler = joblib.load(scaler_path)
+    
+    # Preparar features seguindo EXATAMENTE o pipeline de treinamento
+    
+    # 1. Converter cholesterol e gluc para binário
+    df['cholesterol_high'] = (df['cholesterol'] > 1).astype(int)
+    df['gluc_high'] = (df['gluc'] > 1).astype(int)
+    
+    # 2. Ajustar gender (dataset: 1=feminino, 2=masculino → modelo: 0/1)
+    df['gender'] = df['gender'] - 1
+    
+    # 3. Selecionar features na ORDEM CORRETA do modelo
+    feature_order = [
+        'gender', 'height', 'weight', 'ap_hi', 'ap_lo', 
+        'smoke', 'alco', 'active', 'age_years', 'bmi', 
+        'cholesterol_high', 'gluc_high'
+    ]
+    
+    X_original = df[feature_order].copy()
+    y = df['cardio'].values
+    
+    # 4. Aplicar scaler (transform, não fit)
+    X_scaled = pd.DataFrame(
+        scaler.transform(X_original),
+        columns=feature_order,
+        index=X_original.index
+    )
+    
+    return X_scaled, X_original, y, feature_order
