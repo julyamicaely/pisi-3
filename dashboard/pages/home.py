@@ -84,6 +84,25 @@ def layout():
             ], style={"height": "100%", "boxShadow": "0 2px 8px rgba(0,0,0,0.08)"})
         ], width=12, md=6, lg=4, className="mb-4"),
         
+        # Naive Bayes
+        dbc.Col([
+            dbc.Card([
+                dbc.CardBody([
+                    html.Div([
+                        html.I(className="bi bi-clipboard-data-fill", style={"fontSize": "48px", "color": PALETTE["info"]}),
+                        html.H4("Naive Bayes", className="mt-3 mb-2"),
+                        html.P("Classificador probabilístico baseado no Teorema de Bayes", className="text-muted mb-3"),
+                        dbc.Button(
+                            [html.I(className="bi bi-arrow-right me-2"), "Ver Análise"],
+                            href="/naive-bayes",
+                            color="secondary",
+                            className="w-100"
+                        ),
+                    ], style={"textAlign": "center"})
+                ])
+            ], style={"height": "100%", "boxShadow": "0 2px 8px rgba(0,0,0,0.08)"})
+        ], width=12, md=6, lg=4, className="mb-4"),
+
         # Clusterização
         dbc.Col([
             dbc.Card([
@@ -115,6 +134,7 @@ def layout():
                     html.Ul([
                         html.Li([html.Strong("Random Forest: "), "Classificação robusta com ensemble de árvores"]),
                         html.Li([html.Strong("XGBoost: "), "Gradient Boosting otimizado para máxima precisão"]),
+                        html.Li([html.Strong("Naive Bayes: "), "Classificador probabilístico para dados mistos"]),
                         html.Li([html.Strong("K-Means: "), "Clusterização para descobrir padrões ocultos"]),
                     ]),
                     html.H6("Características:", className="mt-3 mb-2"),
@@ -137,6 +157,7 @@ def layout():
                     html.Ul([
                         html.Li([html.Code("python classification/app.py", style={"fontSize": "12px"}), " - Random Forest"]),
                         html.Li([html.Code("python classification/xgboost_local/app_xgboost.py", style={"fontSize": "12px"}), " - XGBoost"]),
+                        html.Li([html.Code("python classification/naive_bayes/train_naive_bayes.py", style={"fontSize": "12px"}), " - Naive Bayes"]),
                         html.Li([html.Code("python clusterization/n2_clusters.py", style={"fontSize": "12px"}), " - Clusterização"]),
                     ], style={"fontSize": "14px"}),
                     
@@ -157,7 +178,7 @@ def layout():
             dbc.Card([
                 dbc.CardBody([
                     html.I(className="bi bi-file-earmark-code", style={"fontSize": "32px", "color": PALETTE["primary"]}),
-                    html.H3("3", className="mt-2 mb-0"),
+                    html.H3("4", className="mt-2 mb-0"),
                     html.P("Modelos de ML", className="text-muted mb-0 small"),
                 ], style={"textAlign": "center"})
             ])
