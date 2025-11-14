@@ -18,17 +18,6 @@ from sklearn.metrics import confusion_matrix, roc_curve, auc, precision_recall_c
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 from styles import PALETTE, create_plotly_template
-from components.cards import build_roc_curve, build_precision_recall_curve, build_calibration_curve
-
-# Importar módulos do projeto
-sys.path.append(str(Path(__file__).parent.parent.parent))
-try:
-    from classification.preprocess_data import load_and_preprocess_data
-    from classification.evaluation import compute_validation_metrics
-    USE_SHARED_FUNCTIONS = True
-except ImportError:
-    print("⚠️ Funções compartilhadas não disponíveis. Usando modo legacy.")
-    USE_SHARED_FUNCTIONS = False
 
 # Registrar página
 dash.register_page(
@@ -41,21 +30,17 @@ dash.register_page(
 
 # ================== CARREGAR DADOS ==================
 def load_data():
-    """
-    Carrega modelo e dataset. 
-    Usa função compartilhada quando disponível para evitar duplicação.
-    """
+    """Carrega modelo e dataset REAL do Kaggle para análise."""
     base_path = Path(__file__).parent.parent.parent
     
     data = {
         "model": None,
         "X_test": None,
-        "X_test_original": None,
+        "X_test_original": None,  # Dados originais SEM escalar (para filtros)
         "y_test": None,
         "y_pred": None,
         "y_proba": None,
-        "feature_names": None,
-        "metrics": {}
+        "feature_names": None
     }
     
     try:
@@ -64,33 +49,7 @@ def load_data():
         if model_path.exists():
             data["model"] = joblib.load(model_path)
         
-        # USAR FUNÇÃO COMPARTILHADA se disponível (elimina duplicação!)
-        if USE_SHARED_FUNCTIONS and data["model"] is not None:
-            try:
-                X_scaled, X_original, y, feature_names = load_and_preprocess_data()
-                
-                data["X_test"] = X_scaled
-                data["X_test_original"] = X_original
-                data["y_test"] = y
-                data["feature_names"] = feature_names
-                
-                # Fazer predições
-                data["y_pred"] = data["model"].predict(X_scaled)
-                data["y_proba"] = data["model"].predict_proba(X_scaled)
-                
-                # Calcular métricas usando função compartilhada
-                data["metrics"] = compute_validation_metrics(
-                    y, 
-                    data["y_pred"], 
-                    data["y_proba"][:, 1]
-                )
-                
-                print("✅ Usando funções compartilhadas de pré-processamento")
-                return data
-            except Exception as e:
-                print(f"⚠️ Erro ao usar função compartilhada: {e}. Usando método legacy.")
-        
-        # FALLBACK: Método original (legacy)
+        # Carregar dataset REAL do Kaggle
         dataset_path = base_path / "EDA" / "cardio_data.parquet"
         scaler_path = base_path / "classification" / "scalers" / "robust_scaler.joblib"
         
@@ -138,23 +97,9 @@ def load_data():
     return data
 
 rf_data = load_data()
-
-# Calcular métricas globais para exibição
 accuracy = 0.0
-precision = 0.0
-recall = 0.0
-f1_score = 0.0
-auc_roc = 0.0
-
 if rf_data['y_test'] is not None and rf_data['y_pred'] is not None:
     accuracy = np.mean(rf_data['y_test'] == rf_data['y_pred']) * 100
-    
-    # Usar métricas da função compartilhada se disponível
-    if rf_data.get('metrics'):
-        precision = rf_data['metrics'].get('precision', 0) * 100  # Converter para porcentagem
-        recall = rf_data['metrics'].get('recall', 0) * 100
-        f1_score = rf_data['metrics'].get('f1', 0) * 100
-        auc_roc = rf_data['metrics'].get('auc_roc', 0)  # AUC já está em escala 0-1
 
 # ================== HELPERS ==================
 
@@ -184,99 +129,28 @@ layout = dbc.Container([
         html.Div([
             html.H1("🌲 Random Forest Classifier", 
                    className="display-4 fw-bold text-white mb-3"),
-            html.P("Avaliação Completa do Modelo de Risco Cardiovascular", 
+            html.P("Dashboard Interativo de Análise Cardiovascular", 
                   className="lead text-white-50 mb-4"),
-            
-            # MÉTRICAS GLOBAIS DE AVALIAÇÃO
             dbc.Row([
-                # Precision
                 dbc.Col([
                     html.Div([
-                        html.Div([
-                            html.I(className="bi bi-bullseye", 
-                                  style={"fontSize": "24px", "color": "white", "marginBottom": "8px"}),
-                            html.P("Precision", className="text-white-50 mb-1", 
-                                  style={"fontSize": "14px"}),
-                            html.H2(f"{precision:.1f}%", 
-                                   className="text-white mb-0 fw-bold"),
-                        ], className="text-center p-3", 
-                           style={"backgroundColor": "rgba(255,255,255,0.15)", 
-                                  "borderRadius": "12px", "border": "2px solid rgba(255,255,255,0.2)"}),
-                        html.Span([
-                            html.I(className="bi bi-info-circle", id="tooltip-precision",
-                                  style={"color": "rgba(255,255,255,0.7)", "cursor": "pointer", "marginLeft": "8px"}),
-                            dbc.Tooltip("Proporção de diagnósticos positivos corretos. Alta precision = poucos falsos positivos.",
-                                      target="tooltip-precision")
-                        ])
-                    ])
-                ], md=3),
-                
-                # Recall
+                        html.H2(f"{accuracy:.1f}%", className="display-3 fw-bold text-white mb-0"),
+                        html.P("Acurácia", className="text-white-50")
+                    ], className="text-center")
+                ], md=4),
                 dbc.Col([
                     html.Div([
-                        html.Div([
-                            html.I(className="bi bi-heart-pulse", 
-                                  style={"fontSize": "24px", "color": "white", "marginBottom": "8px"}),
-                            html.P("Recall", className="text-white-50 mb-1", 
-                                  style={"fontSize": "14px"}),
-                            html.H2(f"{recall:.1f}%", 
-                                   className="text-white mb-0 fw-bold"),
-                        ], className="text-center p-3", 
-                           style={"backgroundColor": "rgba(255,255,255,0.15)", 
-                                  "borderRadius": "12px", "border": "2px solid rgba(255,255,255,0.2)"}),
-                        html.Span([
-                            html.I(className="bi bi-info-circle", id="tooltip-recall",
-                                  style={"color": "rgba(255,255,255,0.7)", "cursor": "pointer", "marginLeft": "8px"}),
-                            dbc.Tooltip("Capacidade de identificar todos os casos positivos. Alto recall = poucos falsos negativos.",
-                                      target="tooltip-recall")
-                        ])
-                    ])
-                ], md=3),
-                
-                # F1-Score
+                        html.H2(f"{len(rf_data['X_test'])}", className="display-3 fw-bold text-white mb-0"),
+                        html.P("Amostras", className="text-white-50")
+                    ], className="text-center")
+                ], md=4),
                 dbc.Col([
                     html.Div([
-                        html.Div([
-                            html.I(className="bi bi-graph-up", 
-                                  style={"fontSize": "24px", "color": "white", "marginBottom": "8px"}),
-                            html.P("F1-Score", className="text-white-50 mb-1", 
-                                  style={"fontSize": "14px"}),
-                            html.H2(f"{f1_score:.1f}%", 
-                                   className="text-white mb-0 fw-bold"),
-                        ], className="text-center p-3", 
-                           style={"backgroundColor": "rgba(255,255,255,0.15)", 
-                                  "borderRadius": "12px", "border": "2px solid rgba(255,255,255,0.2)"}),
-                        html.Span([
-                            html.I(className="bi bi-info-circle", id="tooltip-f1",
-                                  style={"color": "rgba(255,255,255,0.7)", "cursor": "pointer", "marginLeft": "8px"}),
-                            dbc.Tooltip("Média harmônica entre precision e recall. Balanceia ambas as métricas.",
-                                      target="tooltip-f1")
-                        ])
-                    ])
-                ], md=3),
-                
-                # AUC-ROC
-                dbc.Col([
-                    html.Div([
-                        html.Div([
-                            html.I(className="bi bi-activity", 
-                                  style={"fontSize": "24px", "color": "white", "marginBottom": "8px"}),
-                            html.P("AUC-ROC", className="text-white-50 mb-1", 
-                                  style={"fontSize": "14px"}),
-                            html.H2(f"{auc_roc:.3f}", 
-                                   className="text-white mb-0 fw-bold"),
-                        ], className="text-center p-3", 
-                           style={"backgroundColor": "rgba(255,255,255,0.15)", 
-                                  "borderRadius": "12px", "border": "2px solid rgba(255,255,255,0.2)"}),
-                        html.Span([
-                            html.I(className="bi bi-info-circle", id="tooltip-auc",
-                                  style={"color": "rgba(255,255,255,0.7)", "cursor": "pointer", "marginLeft": "8px"}),
-                            dbc.Tooltip("Área sob a curva ROC. Mede capacidade discriminativa (0.5=aleatório, 1.0=perfeito).",
-                                      target="tooltip-auc")
-                        ])
-                    ])
-                ], md=3),
-            ], className="mt-4")
+                        html.H2("12", className="display-3 fw-bold text-white mb-0"),
+                        html.P("Features", className="text-white-50")
+                    ], className="text-center")
+                ], md=4),
+            ])
         ], className="container py-5")
     ], style={
         "background": f"linear-gradient(135deg, {PALETTE['gradient_start']} 0%, {PALETTE['gradient_end']} 100%)",
@@ -285,16 +159,9 @@ layout = dbc.Container([
         "boxShadow": "0 10px 40px rgba(0,0,0,0.2)"
     }),
     
-    # ========== TABS DE NAVEGAÇÃO ==========
-    dbc.Tabs([
-        # ========== TAB 1: OVERVIEW ==========
-        dbc.Tab(
-            label="📊 Overview",
-            tab_id="tab-overview",
-            children=[
-                html.Div([
-                    make_section_header("graph-up", "Visão Geral do Desempenho", 
-                                        "Métricas principais e matriz de confusão"),
+    # ========== SEÇÃO 1: VISÃO GERAL DO DESEMPENHO ==========
+    make_section_header("graph-up", "Visão Geral do Desempenho", 
+                        "Métricas principais e matriz de confusão"),
     
     dbc.Row([
         dbc.Col([
@@ -318,118 +185,11 @@ layout = dbc.Container([
                 ])
             ], style={"boxShadow": "0 4px 15px rgba(0,0,0,0.1)", "border": "none"})
         ], md=12, className="mb-5"),
-    ])
-                ], className="p-4")
-            ]
-        ),
-        
-        # ========== TAB 2: CURVAS DE DESEMPENHO ==========
-        dbc.Tab(
-            label="📈 Performance Curves",
-            tab_id="tab-curves",
-            children=[
-                html.Div([
-                    make_section_header("activity", "Curvas de Desempenho", 
-                                        "Análise detalhada da capacidade preditiva do modelo"),
+    ]),
     
-    dbc.Row([
-        # Curva ROC
-        dbc.Col([
-            dbc.Card([
-                dbc.CardBody([
-                    html.H5([
-                        html.I(className="bi bi-graph-up me-2", style={"color": PALETTE['accent']}),
-                        "Curva ROC"
-                    ], className="mb-3 fw-bold", style={"fontSize": "18px"}),
-                    html.P(
-                        "Receiver Operating Characteristic",
-                        className="text-muted mb-2", 
-                        style={"fontSize": "13px", "fontStyle": "italic"}
-                    ),
-                    html.P([
-                        "Mostra o trade-off entre ",
-                        html.Strong("Taxa de Verdadeiros Positivos (TPR)"),
-                        " e ",
-                        html.Strong("Taxa de Falsos Positivos (FPR)"),
-                        ". Quanto mais próxima do canto superior esquerdo, melhor o modelo."
-                    ], className="text-muted small mb-4"),
-                    html.Div(
-                        build_roc_curve(rf_data['y_test'], rf_data['y_proba'][:, 1]) if rf_data['y_test'] is not None else html.Div("Dados não disponíveis"),
-                        style={"marginTop": "20px"}
-                    )
-                ], style={"padding": "25px"})
-            ], style={"boxShadow": "0 4px 15px rgba(0,0,0,0.1)", "border": "none", "height": "100%"})
-        ], md=6, className="mb-5"),
-        
-        # Curva Precision-Recall
-        dbc.Col([
-            dbc.Card([
-                dbc.CardBody([
-                    html.H5([
-                        html.I(className="bi bi-bullseye me-2", style={"color": PALETTE['accent']}),
-                        "Curva Precision-Recall"
-                    ], className="mb-3 fw-bold", style={"fontSize": "18px"}),
-                    html.P(
-                        "Equilíbrio entre Precisão e Cobertura",
-                        className="text-muted mb-2", 
-                        style={"fontSize": "13px", "fontStyle": "italic"}
-                    ),
-                    html.P([
-                        "Mostra o equilíbrio entre ",
-                        html.Strong("Precision (acurácia dos positivos)"),
-                        " e ",
-                        html.Strong("Recall (cobertura dos positivos)"),
-                        ". Ideal para datasets desbalanceados."
-                    ], className="text-muted small mb-4"),
-                    html.Div(
-                        build_precision_recall_curve(rf_data['y_test'], rf_data['y_proba'][:, 1]) if rf_data['y_test'] is not None else html.Div("Dados não disponíveis"),
-                        style={"marginTop": "20px"}
-                    )
-                ], style={"padding": "25px"})
-            ], style={"boxShadow": "0 4px 15px rgba(0,0,0,0.1)", "border": "none", "height": "100%"})
-        ], md=6, className="mb-5"),
-    ], className="mb-4"),
-    
-    # Curva de Calibração (largura completa)
-    dbc.Row([
-        dbc.Col([
-            dbc.Card([
-                dbc.CardBody([
-                    html.H5([
-                        html.I(className="bi bi-sliders me-2", style={"color": PALETTE['accent']}),
-                        "Curva de Calibração & Brier Score"
-                    ], className="mb-3 fw-bold", style={"fontSize": "18px"}),
-                    html.P(
-                        "Avaliação da Qualidade das Probabilidades Preditas",
-                        className="text-muted mb-2", 
-                        style={"fontSize": "13px", "fontStyle": "italic"}
-                    ),
-                    html.P([
-                        "Avalia se as probabilidades preditas correspondem às frequências reais. ",
-                        "Uma curva próxima à diagonal indica boa calibração. ",
-                        html.Strong("Brier Score "),
-                        "mede o erro médio quadrático das probabilidades (quanto menor, melhor)."
-                    ], className="text-muted small mb-4"),
-                    html.Div(
-                        build_calibration_curve(rf_data['y_test'], rf_data['y_proba'][:, 1]) if rf_data['y_test'] is not None else html.Div("Dados não disponíveis"),
-                        style={"marginTop": "20px"}
-                    )
-                ], style={"padding": "25px"})
-            ], style={"boxShadow": "0 4px 15px rgba(0,0,0,0.1)", "border": "none"})
-        ], md=12, className="mb-5"),
-    ])
-                ], className="p-4")
-            ]
-        ),
-        
-        # ========== TAB 3: INTERPRETAÇÃO (FEATURE IMPORTANCE) ==========
-        dbc.Tab(
-            label="⭐ Interpretation",
-            tab_id="tab-interpretation",
-            children=[
-                html.Div([
-                    make_section_header("stars", "Importância das Features", 
-                                        "Quais variáveis mais influenciam o modelo?"),
+    # ========== SEÇÃO 2: IMPORTÂNCIA DAS FEATURES ==========
+    make_section_header("stars", "Importância das Features", 
+                        "Quais variáveis mais influenciam o modelo?"),
     
     dbc.Row([
         dbc.Col([
@@ -451,19 +211,11 @@ layout = dbc.Container([
                 ])
             ], style={"boxShadow": "0 4px 15px rgba(0,0,0,0.1)", "border": "none"})
         ], md=12, className="mb-5"),
-    ])
-                ], className="p-4")
-            ]
-        ),
-        
-        # ========== TAB 4: ANÁLISE EXPLORATÓRIA (EDA) ==========
-        dbc.Tab(
-            label="🔍 EDA",
-            tab_id="tab-eda",
-            children=[
-                html.Div([
-                    make_section_header("binoculars", "Análise Exploratória", 
-                                        "Compare features e descubra padrões"),
+    ]),
+    
+    # ========== SEÇÃO 3: ANÁLISE EXPLORATÓRIA ==========
+    make_section_header("binoculars", "Análise Exploratória", 
+                        "Compare features e descubra padrões"),
     
     dbc.Row([
         dbc.Col([
@@ -542,11 +294,41 @@ layout = dbc.Container([
                 ])
             ], style={"boxShadow": "0 4px 15px rgba(0,0,0,0.1)", "border": "none"})
         ], md=12, className="mb-5"),
-    ])
-                ], className="p-4")
-            ]
-        )
-    ], id="main-tabs", active_tab="tab-overview", className="mb-4"),
+    ]),
+    
+    # ========== SEÇÃO 5: CURVAS DE PERFORMANCE ==========
+    make_section_header("activity", "Curvas de Performance", 
+                        "ROC e Precision-Recall para avaliar o modelo"),
+    
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
+                dbc.CardBody([
+                    html.Div([
+                        html.Label("🔍 Filtrar por Pressão Sistólica:", className="fw-bold mb-2"),
+                        dcc.RangeSlider(
+                            id='roc-pressure-filter',
+                            min=80,
+                            max=200,
+                            step=10,
+                            value=[80, 200],
+                            marks={i: f'{i}' for i in range(80, 201, 30)},
+                            tooltip={"placement": "bottom", "always_visible": True}
+                        ),
+                    ], className="mb-3"),
+                    dcc.Graph(id='roc-curve-viz', config={'displayModeBar': True})
+                ])
+            ], style={"boxShadow": "0 4px 15px rgba(0,0,0,0.1)", "border": "none"})
+        ], md=6, className="mb-5"),
+        
+        dbc.Col([
+            dbc.Card([
+                dbc.CardBody([
+                    dcc.Graph(id='precision-recall-viz', config={'displayModeBar': True})
+                ])
+            ], style={"boxShadow": "0 4px 15px rgba(0,0,0,0.1)", "border": "none"})
+        ], md=6, className="mb-5"),
+    ]),
     
     # Footer
     html.Div([
@@ -766,4 +548,81 @@ def update_distribution(feature):
     return fig
 
 
-# Fim dos callbacks
+@callback(
+    [Output('roc-curve-viz', 'figure'),
+     Output('precision-recall-viz', 'figure')],
+    Input('roc-pressure-filter', 'value')
+)
+def update_performance_curves(pressure_range):
+    """Atualiza curvas ROC e Precision-Recall."""
+    # Usar dados ORIGINAIS (não escalados) para filtros
+    df = rf_data['X_test_original'].copy()
+    df['actual'] = rf_data['y_test']
+    df['probability'] = rf_data['y_proba'][:, 1]
+    
+    # Filtrar por pressão (valores originais, não escalados)
+    df = df[(df['ap_hi'] >= pressure_range[0]) & (df['ap_hi'] <= pressure_range[1])]
+    
+    # Verificar se há dados após filtro
+    if len(df) == 0:
+        # Retornar gráficos vazios com mensagem
+        empty_fig = go.Figure()
+        empty_fig.add_annotation(
+            text="Nenhum dado encontrado para este filtro",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False,
+            font=dict(size=16, color=PALETTE['muted'])
+        )
+        return empty_fig, empty_fig
+    
+    # ROC Curve
+    fpr, tpr, _ = roc_curve(df['actual'], df['probability'])
+    roc_auc = auc(fpr, tpr)
+    
+    roc_fig = go.Figure()
+    roc_fig.add_trace(go.Scatter(
+        x=fpr, y=tpr,
+        mode='lines',
+        name=f'ROC (AUC = {roc_auc:.3f})',
+        line=dict(color=PALETTE['primary'], width=4),
+        fill='tozeroy',
+        fillcolor=f'rgba(30, 136, 229, 0.2)'
+    ))
+    roc_fig.add_trace(go.Scatter(
+        x=[0, 1], y=[0, 1],
+        mode='lines',
+        name='Baseline (Random)',
+        line=dict(color=PALETTE['muted'], dash='dash', width=2)
+    ))
+    
+    roc_fig.update_layout(
+        title=dict(text='ROC Curve', font=dict(size=20, color=PALETTE['dark'])),
+        xaxis_title='Taxa de Falsos Positivos',
+        yaxis_title='Taxa de Verdadeiros Positivos',
+        height=400,
+        template=create_plotly_template(),
+        legend=dict(font=dict(size=12))
+    )
+    
+    # Precision-Recall Curve
+    precision, recall, _ = precision_recall_curve(df['actual'], df['probability'])
+    
+    pr_fig = go.Figure()
+    pr_fig.add_trace(go.Scatter(
+        x=recall, y=precision,
+        mode='lines',
+        fill='tozeroy',
+        name='Precision-Recall',
+        line=dict(color=PALETTE['accent'], width=4),
+        fillcolor=f'rgba(0, 172, 193, 0.2)'
+    ))
+    
+    pr_fig.update_layout(
+        title=dict(text='Precision-Recall Curve', font=dict(size=20, color=PALETTE['dark'])),
+        xaxis_title='Recall (Sensibilidade)',
+        yaxis_title='Precision (Valor Preditivo Positivo)',
+        height=400,
+        template=create_plotly_template()
+    )
+    
+    return roc_fig, pr_fig
