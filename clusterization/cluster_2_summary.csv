@@ -1,3 +1,0 @@
-cluster,age_years,height,weight,ap_hi,ap_lo,gender,cholesterol,gluc,smoke,alco,active,n_pacientes,percentual
-0,54.980,164.880,81.810,142.600,89.590,1.390,1.636,1.346,0.101,0.067,0.804,23972,35.197
-1,51.650,164.190,69.950,117.670,76.750,1.326,1.215,1.160,0.080,0.046,0.803,44136,64.803

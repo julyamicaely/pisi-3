@@ -215,6 +215,8 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+teste.py
+notes.txt
 # Machine Learning Models and Artifacts
 # Arquivos grandes de modelos treinados (podem ser regenerados)
 *.joblib
