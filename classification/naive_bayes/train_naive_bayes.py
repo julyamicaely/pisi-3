@@ -28,14 +28,14 @@ df['age_years'] = (df['age'] / 365).round().astype(int)
 df['bmi'] = df['weight'] / (df['height']/100)**2
 
 # Define features and target
-X = df[['age_years', 'height', 'weight', 'ap_hi', 'ap_lo', 'bmi', 'gender', 'cholesterol', 'gluc', 'smoke', 'alco', 'active']]
+X = df[['age_years', 'ap_hi', 'ap_lo', 'bmi', 'gender', 'cholesterol', 'gluc', 'smoke', 'alco', 'active']]
 y = df['cardio']
 
 # Split data
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # Define preprocessing for continuous and categorical features
-continuous_features = ['age_years', 'height', 'weight', 'ap_hi', 'ap_lo', 'bmi']
+continuous_features = ['age_years', 'ap_hi', 'ap_lo', 'bmi']
 categorical_features = ['gender', 'cholesterol', 'gluc', 'smoke', 'alco', 'active']
 
 continuous_transformer = Pipeline(steps=[
@@ -74,7 +74,10 @@ grid_search.fit(X_train, y_train)
 best_pipeline = grid_search.best_estimator_
 
 # --- Save and Evaluate the Best Model ---
-# Save the best model and preprocessor
+# Save the entire best pipeline
+joblib.dump(best_pipeline, 'classification/models/naive_bayes_pipeline.joblib')
+
+# Save the best model and preprocessor separately (optional, for inspection)
 joblib.dump(best_pipeline.named_steps['model'], 'classification/models/naive_bayes_model.joblib')
 joblib.dump(best_pipeline.named_steps['preprocessor'], 'classification/scalers/naive_bayes_preprocessor.joblib')
 
