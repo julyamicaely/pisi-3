@@ -1,0 +1,16 @@
+{
+  "date": "2025-11-14 14:34:17",
+  "best_score": 0.7984076474670404,
+  "best_params": {
+    "n_estimators": 450,
+    "max_depth": 8,
+    "learning_rate": 0.06427369243810918,
+    "subsample": 0.6718069477443992,
+    "colsample_bytree": 0.8082416838084031,
+    "gamma": 4.0070108800965905,
+    "reg_alpha": 1.4502938430214707,
+    "reg_lambda": 5.126931836816262,
+    "min_child_weight": 7
+  },
+  "source": "optuna_optimization"
+}
