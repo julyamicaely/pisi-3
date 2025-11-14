@@ -8,7 +8,7 @@ import pandas as pd
 import joblib
 from pathlib import Path
 import base64
-import re
+import re 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from styles import PALETTE
@@ -87,7 +87,7 @@ roc_curve_img = encode_image(RESULTS_PATH / "naive_bayes_roc_curve.png")
 pr_curve_img = encode_image(RESULTS_PATH / "naive_bayes_pr_curve.png")
 
 # Define continuous features for distribution plots
-continuous_features = ['age_years', 'height', 'weight', 'ap_hi', 'ap_lo', 'bmi']
+continuous_features = ['age_years', 'ap_hi', 'ap_lo', 'bmi']
 
 # --- Page Components ---
 
@@ -99,13 +99,13 @@ prediction_card = dbc.Card(
             # Column 1: Continuous Features
             dbc.Col([
                 dbc.Label("Age (Years)", html_for="nb-age-years"),
-                dbc.Input(id="nb-age-years", type="number", placeholder="e.g., 50", min=20, max=80),
+                dbc.Input(id="nb-age-years", type="number", placeholder="e.g., 50", min=3, max=120),
                 html.Br(),
                 dbc.Label("Height (cm)", html_for="nb-height"),
-                dbc.Input(id="nb-height", type="number", placeholder="e.g., 168", min=100, max=220),
+                dbc.Input(id="nb-height", type="number", placeholder="e.g., 168", min=30, max=220),
                 html.Br(),
                 dbc.Label("Weight (kg)", html_for="nb-weight"),
-                dbc.Input(id="nb-weight", type="number", placeholder="e.g., 70.0", min=30, max=200, step=0.1),
+                dbc.Input(id="nb-weight", type="number", placeholder="e.g., 70.0", min=5, max=400, step=0.1),
                 html.Br(),
                 dbc.Label("Systolic Blood Pressure (ap_hi)", html_for="nb-ap-hi"),
                 dbc.Input(id="nb-ap-hi", type="number", placeholder="e.g., 120", min=60, max=240),
@@ -241,29 +241,26 @@ def predict_live(n_clicks, age_years, height, weight, ap_hi, ap_lo, gender, chol
         return dbc.Alert("Please fill in all fields to get a prediction.", color="warning")
 
     try:
-        # Load the correct model and preprocessor
-        model = joblib.load(MODELS_PATH / "naive_bayes_model.joblib")
-        preprocessor = joblib.load(SCALERS_PATH / "naive_bayes_preprocessor.joblib")
+        # Load the entire pipeline (preprocessor + model)
+        pipeline = joblib.load(MODELS_PATH / "naive_bayes_pipeline.joblib")
 
-        # Feature Engineering: Calculate BMI
-        height_m = height / 100
-        bmi = weight / (height_m ** 2) if height_m > 0 else 0
+        # Feature Engineering: Calculate BMI from user inputs
+        height_m = height / 100 if height is not None and height > 0 else 0
+        bmi = weight / (height_m ** 2) if height_m > 0 and weight is not None else 0
 
-        # Create a DataFrame with the raw input data in the correct order
-        feature_order = ['age_years', 'height', 'weight', 'ap_hi', 'ap_lo', 'bmi', 
+        # Create a DataFrame with the user input in the correct order.
+        # The columns must match the features the model was trained on.
+        feature_order = ['age_years', 'ap_hi', 'ap_lo', 'bmi', 
                          'gender', 'cholesterol', 'gluc', 'smoke', 'alco', 'active']
         
         input_data = pd.DataFrame([[
-            age_years, height, weight, ap_hi, ap_lo, bmi,
+            age_years, ap_hi, ap_lo, bmi,
             gender, cholesterol, gluc, smoke, alco, active
         ]], columns=feature_order)
 
-        # Apply the full preprocessing pipeline
-        input_processed = preprocessor.transform(input_data)
-
-        # Make prediction
-        prediction = model.predict(input_processed)[0]
-        probability = model.predict_proba(input_processed)[0]
+        # Make prediction using the full pipeline
+        prediction = pipeline.predict(input_data)[0]
+        probability = pipeline.predict_proba(input_data)[0]
 
         # Display result
         if prediction == 1:
