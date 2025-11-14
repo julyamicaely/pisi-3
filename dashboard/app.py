@@ -22,6 +22,9 @@ app = Dash(
     update_title="Carregando...",
 )
 
+# Permitir callbacks duplicados (necessário para hot-reload em desenvolvimento)
+app.config.suppress_callback_exceptions = True
+
 server = app.server  # Para deploy em produção
 
 # ================== SIDEBAR ==================
