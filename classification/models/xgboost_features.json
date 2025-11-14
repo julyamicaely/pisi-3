@@ -1,0 +1,15 @@
+{
+  "features": [
+    "gender",
+    "ap_hi",
+    "ap_lo",
+    "smoke",
+    "alco",
+    "active",
+    "age_years",
+    "bmi",
+    "cholesterol_high",
+    "gluc_high"
+  ],
+  "n_features": 10
+}

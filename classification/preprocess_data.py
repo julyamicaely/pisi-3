@@ -71,7 +71,9 @@ def preprocess_data():
         "bp_category",      # categórica textual
         "bp_category_encoded",  # redundante com ap_hi e ap_lo
         "cholesterol",      # substituído por cholesterol_high
-        "gluc"              # substituído por gluc_high
+        "gluc",             # substituído por gluc_high
+        "height",           # redundante - BMI já captura essa informação
+        "weight"            # redundante - BMI já captura essa informação
     ]
     df = df.drop(columns=[c for c in cols_to_drop if c in df.columns], errors="ignore")
 
@@ -199,8 +201,9 @@ def load_and_preprocess_data():
     df['gender'] = df['gender'] - 1
     
     # 3. Selecionar features na ORDEM CORRETA do modelo
+    # ✅ REMOVIDO weight e height - mantendo apenas BMI para evitar redundância
     feature_order = [
-        'gender', 'height', 'weight', 'ap_hi', 'ap_lo', 
+        'gender', 'ap_hi', 'ap_lo', 
         'smoke', 'alco', 'active', 'age_years', 'bmi', 
         'cholesterol_high', 'gluc_high'
     ]
