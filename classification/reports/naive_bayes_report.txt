@@ -1,0 +1,16 @@
+Best Parameters: {'model__var_smoothing': np.float64(0.01)}
+Accuracy: 0.6772963858954623
+Precision: 0.7197452229299363
+Recall: 0.5583171133403204
+F1-Score: 0.6288364249578415
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.65      0.79      0.71      6962
+           1       0.72      0.56      0.63      6679
+
+    accuracy                           0.68     13641
+   macro avg       0.69      0.67      0.67     13641
+weighted avg       0.68      0.68      0.67     13641
+

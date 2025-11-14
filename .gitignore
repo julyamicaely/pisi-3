@@ -217,3 +217,41 @@ __marimo__/
 
 teste.py
 notes.txt
+# Machine Learning Models and Artifacts
+# Arquivos grandes de modelos treinados (podem ser regenerados)
+*.joblib
+*.pkl
+*.h5
+*.hdf5
+
+# Mantém apenas estrutura de diretórios, não os modelos
+classification/models/*.joblib
+classification/scalers/*.joblib
+classification/encoders/*.joblib
+
+# Relatórios e visualizações gerados (podem ser regenerados)
+classification/reports/*.png
+classification/reports/*.txt
+classification/reports/*_2025*.json
+classification/reports/*_2025*.txt
+classification/reports/xgboost_confusion_matrix_*.png
+classification/reports/xgboost_roc_curve_*.png
+classification/reports/xgboost_precision_recall_*.png
+classification/reports/xgboost_metrics_*.json
+classification/reports/xgboost_metrics_report_*.txt
+classification/reports/xgboost_feature_importance_*.png
+classification/reports/xgboost_feature_importance_*.json
+
+# Mantém apenas resultados essenciais (Optuna, CV)
+!classification/reports/xgboost_best_params.json
+!classification/reports/xgboost_optuna_results_*.json
+!classification/reports/xgboost_cv_results_*.json
+
+# Metadados de modelos timestamped (muitos backups)
+classification/models/xgboost_metadata_*.json
+classification/models/xgboost_model_*.joblib
+classification/models/random_forest_model_*.joblib
+
+# Mantém apenas arquivos de configuração e features
+!classification/models/xgboost_features.json
+!classification/models/random_forest_features.json

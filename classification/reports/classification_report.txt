@@ -1,0 +1,17 @@
+=== Relatório de Classificação (Pipeline Corrigido - Sem Vazamento) ===
+
+MUDANÇAS APLICADAS:
+✅ train_test_split executado ANTES de RobustScaler e SMOTE
+✅ RobustScaler ajustado apenas em X_train
+✅ SMOTE aplicado apenas em X_train, y_train
+✅ Teste avaliado com dados originais (sem SMOTE)
+✅ Modelo salvo em models/ (não mais em encoders/)
+
+              precision    recall  f1-score   support
+
+           0       0.74      0.80      0.77      5374
+           1       0.70      0.62      0.66      3937
+
+    accuracy                           0.73      9311
+   macro avg       0.72      0.71      0.71      9311
+weighted avg       0.72      0.73      0.72      9311
