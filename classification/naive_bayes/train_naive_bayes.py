@@ -1,5 +1,6 @@
+import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import RobustScaler, PowerTransformer, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -57,16 +58,29 @@ model_pipeline = Pipeline(steps=[
     ('model', GaussianNB())
 ])
 
-# Train the model
-model_pipeline.fit(X_train, y_train)
+# --- Hyperparameter Tuning using GridSearchCV ---
+# Define the parameter grid to search
+param_grid = {
+    'model__var_smoothing': np.logspace(-9, -2, num=100)
+}
 
-# Save the model and preprocessor
-joblib.dump(model_pipeline.named_steps['model'], 'classification/models/naive_bayes_model.joblib')
-joblib.dump(model_pipeline.named_steps['preprocessor'], 'classification/scalers/naive_bayes_preprocessor.joblib')
+# Create the GridSearchCV object
+grid_search = GridSearchCV(model_pipeline, param_grid, cv=5, scoring='f1_weighted', n_jobs=-1)
 
-# Make predictions
-y_pred = model_pipeline.predict(X_test)
-y_prob = model_pipeline.predict_proba(X_test)[:, 1]
+# Train the model with GridSearchCV
+grid_search.fit(X_train, y_train)
+
+# Get the best pipeline
+best_pipeline = grid_search.best_estimator_
+
+# --- Save and Evaluate the Best Model ---
+# Save the best model and preprocessor
+joblib.dump(best_pipeline.named_steps['model'], 'classification/models/naive_bayes_model.joblib')
+joblib.dump(best_pipeline.named_steps['preprocessor'], 'classification/scalers/naive_bayes_preprocessor.joblib')
+
+# Make predictions with the best model
+y_pred = best_pipeline.predict(X_test)
+y_prob = best_pipeline.predict_proba(X_test)[:, 1]
 
 # Generate and save classification report
 accuracy = accuracy_score(y_test, y_pred)
@@ -75,7 +89,8 @@ recall = recall_score(y_test, y_pred)
 f1 = f1_score(y_test, y_pred)
 report = classification_report(y_test, y_pred)
 
-report_content = f"""Accuracy: {accuracy}
+report_content = f"""Best Parameters: {grid_search.best_params_}
+Accuracy: {accuracy}
 Precision: {precision}
 Recall: {recall}
 F1-Score: {f1}
