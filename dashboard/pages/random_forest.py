@@ -233,47 +233,11 @@ def load_data():
     except Exception as e:
         print(f"Erro ao carregar dados: {e}")
     
-    # Calcular SHAP values (apenas uma amostra para performance)
-    # DESABILITADO: Muito lento no carregamento inicial
-    # Para habilitar, descomente o bloco abaixo
-    """
-    if SHAP_AVAILABLE and data["model"] is not None and data["X_test"] is not None:
-        try:
-            print("📊 Calculando SHAP values para 2000 amostras...")
-            sample_size = min(2000, len(data["X_test"]))
-            sample_indices = np.random.choice(len(data["X_test"]), size=sample_size, replace=False)
-            X_sample = data["X_test"].iloc[sample_indices]
-            
-            explainer = shap.TreeExplainer(data["model"])
-            shap_values_raw = explainer.shap_values(X_sample)
-            
-            # Extrair classe positiva
-            if isinstance(shap_values_raw, list):
-                data["shap_values"] = shap_values_raw[1]
-                data["shap_base_value"] = explainer.expected_value[1]
-            elif len(shap_values_raw.shape) == 3:
-                data["shap_values"] = shap_values_raw[:, :, 1]
-                data["shap_base_value"] = explainer.expected_value[1] if isinstance(explainer.expected_value, list) else explainer.expected_value
-            else:
-                data["shap_values"] = shap_values_raw
-                data["shap_base_value"] = explainer.expected_value
-            
-            data["X_sample"] = X_sample
-            data["X_sample_original"] = data["X_test_original"].iloc[sample_indices]
-            data["y_sample"] = data["y_test"][sample_indices]
-            data["sample_indices"] = sample_indices
-            print(f"✅ SHAP values calculados para {sample_size} amostras")
-        except Exception as e:
-            print(f"⚠️ Erro ao calcular SHAP values: {e}")
-            import traceback
-            traceback.print_exc()
-    else:
-        if not SHAP_AVAILABLE:
-            print("⚠️ SHAP não está instalado. Instale com: pip install shap")
-        else:
-            print("⚠️ Modelo ou dados não disponíveis para SHAP")
-    """
-    print("ℹ️ SHAP desabilitado para carregamento rápido do dashboard")
+    # ⚡ SHAP ESTÁTICO: Carrega imagens pré-geradas (muito mais rápido!)
+    # Para gerar novas imagens SHAP, execute:
+    #    python -m classification.generate_shap_images
+    print("📷 SHAP mode: Carregando imagens pré-geradas (instantâneo!)")
+    print("💡 Para atualizar SHAP: python -m classification.generate_shap_images")
     
     return data
 
@@ -727,7 +691,7 @@ layout = dbc.Container([
                     make_section_header("lightbulb", "SHAP - Explainability AI", 
                                         "Interpretabilidade avançada com SHapley Additive exPlanations"),
     
-    # Galeria de Visualizações SHAP (imagens estáticas)
+    # 📷 Galeria de Imagens SHAP (carregadas instantaneamente!)
     dbc.Row([
         dbc.Col([
             dbc.Card([
@@ -736,6 +700,7 @@ layout = dbc.Container([
                         html.I(className="bi bi-images me-2", style={"color": PALETTE['accent']}),
                         "Galeria de Visualizações SHAP"
                     ], className="mb-3 fw-bold", style={"fontSize": "20px"}),
+                    
                     html.P([
                         "Selecione a visualização para explorar diferentes aspectos da interpretabilidade do modelo."
                     ], className="text-muted small mb-3"),
@@ -744,25 +709,25 @@ layout = dbc.Container([
                     dbc.ButtonGroup([
                         dbc.Button([
                             html.I(className="bi bi-bar-chart-fill me-2"),
-                            "Summary Plot"
-                        ], id="btn-shap-summary", color="primary", outline=True, className="me-2"),
+                            "Summary"
+                        ], id="btn-shap-summary", color="primary", outline=False, active=True),
                         dbc.Button([
                             html.I(className="bi bi-graph-up me-2"),
-                            "Feature Importance"
-                        ], id="btn-shap-bar", color="primary", outline=True, className="me-2"),
+                            "Importância"
+                        ], id="btn-shap-bar", color="primary", outline=True),
                         dbc.Button([
                             html.I(className="bi bi-water me-2"),
-                            "Waterfall (Amostra)"
+                            "Waterfall"
                         ], id="btn-shap-waterfall", color="primary", outline=True),
-                    ], className="mb-4 d-flex flex-wrap", style={"gap": "10px"}),
+                    ], className="mb-4 d-flex flex-wrap w-100", style={"gap": "10px"}),
                     
                     # Container para a imagem
                     html.Div(id='shap-image-container', children=[
                         html.Img(
-                            src='/assets/shap_summary.png',
+                            src='/assets/shap_images/shap_summary_plot.png',
                             style={
                                 'width': '100%',
-                                'maxWidth': '1000px',
+                                'maxWidth': '1200px',
                                 'height': 'auto',
                                 'display': 'block',
                                 'margin': '0 auto',
@@ -770,7 +735,8 @@ layout = dbc.Container([
                                 'borderRadius': '8px',
                                 'boxShadow': '0 4px 12px rgba(0,0,0,0.1)'
                             },
-                            id='shap-image'
+                            id='shap-image',
+                            className="img-fluid"
                         )
                     ], className="text-center mb-3"),
                     
@@ -1262,7 +1228,7 @@ def update_shap_gallery(summary_clicks, bar_clicks, waterfall_clicks):
     # Configuração de cada visualização
     configs = {
         'btn-shap-summary': {
-            'src': '/assets/shap_summary.png',
+            'src': '/assets/shap_images/shap_summary_plot.png',
             'desc': dbc.Alert([
                 html.I(className="bi bi-lightbulb text-warning me-2"),
                 html.Strong("Summary Plot: "),
@@ -1280,7 +1246,7 @@ def update_shap_gallery(summary_clicks, bar_clicks, waterfall_clicks):
             ], color="light", className="mb-0")
         },
         'btn-shap-bar': {
-            'src': '/assets/shap_bar.png',
+            'src': '/assets/shap_images/shap_bar_plot.png',
             'desc': dbc.Alert([
                 html.I(className="bi bi-lightbulb text-warning me-2"),
                 html.Strong("Feature Importance (SHAP): "),
@@ -1297,7 +1263,7 @@ def update_shap_gallery(summary_clicks, bar_clicks, waterfall_clicks):
             ], color="light", className="mb-0")
         },
         'btn-shap-waterfall': {
-            'src': '/assets/shap_waterfall_0.png',
+            'src': '/assets/shap_images/shap_waterfall_example.png',
             'desc': dbc.Alert([
                 html.I(className="bi bi-lightbulb text-warning me-2"),
                 html.Strong("Waterfall Plot (Explicação Local): "),
