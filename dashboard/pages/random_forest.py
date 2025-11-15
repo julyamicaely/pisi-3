@@ -30,6 +30,14 @@ except ImportError:
     print("⚠️ Funções compartilhadas não disponíveis. Usando modo legacy.")
     USE_SHARED_FUNCTIONS = False
 
+# Importar SHAP (opcional)
+try:
+    import shap
+    SHAP_AVAILABLE = True
+except ImportError:
+    print("⚠️ SHAP não disponível. Instale com: pip install shap")
+    SHAP_AVAILABLE = False
+
 # Registrar página
 dash.register_page(
     __name__,
@@ -55,7 +63,9 @@ def load_data():
         "y_pred": None,
         "y_proba": None,
         "feature_names": None,
-        "metrics": {}
+        "metrics": {},
+        "shap_values": None,
+        "shap_base_value": None
     }
     
     try:
@@ -134,6 +144,43 @@ def load_data():
     
     except Exception as e:
         print(f"Erro ao carregar dados: {e}")
+    
+    # Calcular SHAP values (apenas uma amostra para performance)
+    if SHAP_AVAILABLE and data["model"] is not None and data["X_test"] is not None:
+        try:
+            print("📊 Calculando SHAP values para 2000 amostras...")
+            sample_size = min(2000, len(data["X_test"]))
+            sample_indices = np.random.choice(len(data["X_test"]), size=sample_size, replace=False)
+            X_sample = data["X_test"].iloc[sample_indices]
+            
+            explainer = shap.TreeExplainer(data["model"])
+            shap_values_raw = explainer.shap_values(X_sample)
+            
+            # Extrair classe positiva
+            if isinstance(shap_values_raw, list):
+                data["shap_values"] = shap_values_raw[1]
+                data["shap_base_value"] = explainer.expected_value[1]
+            elif len(shap_values_raw.shape) == 3:
+                data["shap_values"] = shap_values_raw[:, :, 1]
+                data["shap_base_value"] = explainer.expected_value[1] if isinstance(explainer.expected_value, list) else explainer.expected_value
+            else:
+                data["shap_values"] = shap_values_raw
+                data["shap_base_value"] = explainer.expected_value
+            
+            data["X_sample"] = X_sample
+            data["X_sample_original"] = data["X_test_original"].iloc[sample_indices]
+            data["y_sample"] = data["y_test"][sample_indices]
+            data["sample_indices"] = sample_indices
+            print(f"✅ SHAP values calculados para {sample_size} amostras")
+        except Exception as e:
+            print(f"⚠️ Erro ao calcular SHAP values: {e}")
+            import traceback
+            traceback.print_exc()
+    else:
+        if not SHAP_AVAILABLE:
+            print("⚠️ SHAP não está instalado. Instale com: pip install shap")
+        else:
+            print("⚠️ Modelo ou dados não disponíveis para SHAP")
     
     return data
 
@@ -456,7 +503,82 @@ layout = dbc.Container([
             ]
         ),
         
-        # ========== TAB 4: ANÁLISE EXPLORATÓRIA (EDA) ==========
+        # ========== TAB 4: SHAP INTERPRETABILITY ==========
+        dbc.Tab(
+            label="🔬 SHAP Analysis",
+            tab_id="tab-shap",
+            children=[
+                html.Div([
+                    make_section_header("lightbulb", "SHAP - Explainability AI", 
+                                        "Interpretabilidade avançada com SHapley Additive exPlanations"),
+    
+    # Galeria de Visualizações SHAP (imagens estáticas)
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
+                dbc.CardBody([
+                    html.H5([
+                        html.I(className="bi bi-images me-2", style={"color": PALETTE['accent']}),
+                        "Galeria de Visualizações SHAP"
+                    ], className="mb-3 fw-bold", style={"fontSize": "20px"}),
+                    html.P([
+                        "Selecione a visualização para explorar diferentes aspectos da interpretabilidade do modelo."
+                    ], className="text-muted small mb-3"),
+                    
+                    # Botões de navegação
+                    dbc.ButtonGroup([
+                        dbc.Button([
+                            html.I(className="bi bi-bar-chart-fill me-2"),
+                            "Summary Plot"
+                        ], id="btn-shap-summary", color="primary", outline=True, className="me-2"),
+                        dbc.Button([
+                            html.I(className="bi bi-graph-up me-2"),
+                            "Feature Importance"
+                        ], id="btn-shap-bar", color="primary", outline=True, className="me-2"),
+                        dbc.Button([
+                            html.I(className="bi bi-water me-2"),
+                            "Waterfall (Amostra)"
+                        ], id="btn-shap-waterfall", color="primary", outline=True),
+                    ], className="mb-4 d-flex flex-wrap", style={"gap": "10px"}),
+                    
+                    # Container para a imagem
+                    html.Div(id='shap-image-container', children=[
+                        html.Img(
+                            src='/assets/shap_summary.png',
+                            style={
+                                'width': '100%',
+                                'maxWidth': '1000px',
+                                'height': 'auto',
+                                'display': 'block',
+                                'margin': '0 auto',
+                                'border': '1px solid #ddd',
+                                'borderRadius': '8px',
+                                'boxShadow': '0 4px 12px rgba(0,0,0,0.1)'
+                            },
+                            id='shap-image'
+                        )
+                    ], className="text-center mb-3"),
+                    
+                    # Descrição dinâmica
+                    html.Div(id='shap-description', children=[
+                        dbc.Alert([
+                            html.I(className="bi bi-lightbulb text-warning me-2"),
+                            html.Strong("Summary Plot: "),
+                            "Visualização global mostrando todas as features ordenadas por importância. ",
+                            "Cada ponto representa uma amostra, a cor indica o valor da feature (vermelho=alto, azul=baixo), ",
+                            "e a posição horizontal mostra o impacto SHAP na predição. ",
+                            "Features no topo têm maior impacto global."
+                        ], color="light", className="mb-0")
+                    ])
+                ])
+            ], style={"boxShadow": "0 4px 15px rgba(0,0,0,0.1)", "border": "none"})
+        ], md=12, className="mb-5"),
+    ])
+                ], className="p-4")
+            ]
+        ),
+        
+        # ========== TAB 5: ANÁLISE EXPLORATÓRIA (EDA) ==========
         dbc.Tab(
             label="🔍 EDA",
             tab_id="tab-eda",
@@ -764,6 +886,100 @@ def update_distribution(feature):
     )
     
     return fig
+
+
+# ================== CALLBACKS SHAP ==================
+
+@callback(
+    [Output('shap-image', 'src'),
+     Output('shap-description', 'children'),
+     Output('btn-shap-summary', 'color'),
+     Output('btn-shap-bar', 'color'),
+     Output('btn-shap-waterfall', 'color')],
+    [Input('btn-shap-summary', 'n_clicks'),
+     Input('btn-shap-bar', 'n_clicks'),
+     Input('btn-shap-waterfall', 'n_clicks')],
+    prevent_initial_call=False
+)
+def update_shap_gallery(summary_clicks, bar_clicks, waterfall_clicks):
+    """Atualiza galeria de imagens SHAP baseado no botão clicado."""
+    ctx = dash.callback_context
+    
+    # Determinar qual botão foi clicado
+    if not ctx.triggered:
+        button_id = 'btn-shap-summary'
+    else:
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    # Configuração de cada visualização
+    configs = {
+        'btn-shap-summary': {
+            'src': '/assets/shap_summary.png',
+            'desc': dbc.Alert([
+                html.I(className="bi bi-lightbulb text-warning me-2"),
+                html.Strong("Summary Plot: "),
+                "Visualização global mostrando ",
+                html.Strong("todas as 10 features"),
+                " ordenadas por importância. ",
+                "Cada ponto representa uma amostra, a cor indica o valor da feature (vermelho=alto, azul=baixo), ",
+                "e a posição horizontal mostra o impacto SHAP na predição. ",
+                html.Br(),
+                html.Br(),
+                "📌 ",
+                html.Strong("Como interpretar: "),
+                "Features no topo têm maior impacto global no modelo. ",
+                "Pontos vermelhos à direita indicam que valores altos da feature aumentam a probabilidade de doença cardiovascular."
+            ], color="light", className="mb-0")
+        },
+        'btn-shap-bar': {
+            'src': '/assets/shap_bar.png',
+            'desc': dbc.Alert([
+                html.I(className="bi bi-lightbulb text-warning me-2"),
+                html.Strong("Feature Importance (SHAP): "),
+                "Importância média absoluta de cada feature. ",
+                "Mostra ",
+                html.Strong("quanto cada variável contribui em média"),
+                " para as predições do modelo, independente da direção (positiva ou negativa). ",
+                html.Br(),
+                html.Br(),
+                "📌 ",
+                html.Strong("Como interpretar: "),
+                "Barras maiores = maior influência global no modelo. ",
+                "Compare com a Feature Importance tradicional (Gini) na aba 'Interpretation' para ver as diferenças entre os métodos."
+            ], color="light", className="mb-0")
+        },
+        'btn-shap-waterfall': {
+            'src': '/assets/shap_waterfall_0.png',
+            'desc': dbc.Alert([
+                html.I(className="bi bi-lightbulb text-warning me-2"),
+                html.Strong("Waterfall Plot (Explicação Local): "),
+                "Explica ",
+                html.Strong("uma predição individual"),
+                " mostrando como cada feature contribuiu para o resultado daquele paciente específico. ",
+                "Inicia no valor base (predição média) e adiciona/subtrai contribuições até chegar na predição final. ",
+                html.Br(),
+                html.Br(),
+                "📌 ",
+                html.Strong("Como interpretar: "),
+                "Barras vermelhas empurram a predição para 'Com Doença', ",
+                "barras azuis empurram para 'Sem Doença'. ",
+                "O valor final f(x) é a predição do modelo para esta amostra específica. ",
+                "Ideal para explicar decisões individuais em contextos clínicos."
+            ], color="light", className="mb-0")
+        }
+    }
+    
+    # Obter configuração da visualização selecionada
+    config = configs.get(button_id, configs['btn-shap-summary'])
+    
+    # Definir cores dos botões (primary para selecionado, outline para outros)
+    colors = {
+        'summary': 'primary' if button_id == 'btn-shap-summary' else 'secondary',
+        'bar': 'primary' if button_id == 'btn-shap-bar' else 'secondary',
+        'waterfall': 'primary' if button_id == 'btn-shap-waterfall' else 'secondary'
+    }
+    
+    return config['src'], config['desc'], colors['summary'], colors['bar'], colors['waterfall']
 
 
 # Fim dos callbacks

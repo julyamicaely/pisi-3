@@ -1,0 +1,53 @@
+{
+  "best_params": {
+    "n_estimators": 100,
+    "min_samples_split": 15,
+    "min_samples_leaf": 2,
+    "max_features": "log2",
+    "max_depth": 20,
+    "bootstrap": true
+  },
+  "best_score": 0.7936443753996221,
+  "n_iter": 8,
+  "cv_folds": 3,
+  "random_state": 42,
+  "elapsed_seconds": 61.75672936439514,
+  "cv_metrics": {
+    "fit_time": [
+      0.3988759517669678,
+      0.4099562168121338,
+      0.42538928985595703
+    ],
+    "score_time": [
+      0.11630535125732422,
+      0.12450432777404785,
+      0.11762833595275879
+    ],
+    "test_accuracy": [
+      0.7176971273200142,
+      0.7250265988887575,
+      0.7273587136438875
+    ],
+    "test_precision": [
+      0.7449468085106383,
+      0.7540720961281709,
+      0.7619177335875783
+    ],
+    "test_recall": [
+      0.6621749408983452,
+      0.6677701584298888,
+      0.6613856703712462
+    ],
+    "test_f1": [
+      0.7011264080100125,
+      0.7083019814396789,
+      0.7081012658227848
+    ],
+    "test_roc_auc": [
+      0.7861436875966743,
+      0.7968498217027874,
+      0.7979396168994044
+    ]
+  },
+  "summary_md": "# Random Forest Tuning Summary\n**Best ROC-AUC (cv)**: 0.793644\n**Best parameters**: {\"n_estimators\": 100, \"min_samples_split\": 15, \"min_samples_leaf\": 2, \"max_features\": \"log2\", \"max_depth\": 20, \"bootstrap\": true}\n**Random state**: 42\n**Elapsed (s)**: 61.8\n\n## CV metrics per fold\n- **test_accuracy**: mean=0.7234, std=0.0041\n- **test_precision**: mean=0.7536, std=0.0069\n- **test_recall**: mean=0.6638, std=0.0028\n- **test_f1**: mean=0.7058, std=0.0033\n- **test_roc_auc**: mean=0.7936, std=0.0053\n"
+}
