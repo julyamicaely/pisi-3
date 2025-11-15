@@ -6,7 +6,12 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from preprocess_data import preprocess_data
+from classification.preprocess_data import preprocess_data
+import json
+import numpy as np
+from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold, cross_validate
+from sklearn.metrics import make_scorer, accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+import time
 
 
 def train_random_forest():
@@ -26,30 +31,37 @@ def train_random_forest():
         - feature_names: nomes das colunas originais (para análise de importância)
     """
 
+    # This function now runs a tuning flow by default. Use run_tuning.py for a dedicated run.
     print("🔧 Iniciando pré-processamento dos dados (sem vazamento)...")
     X_train, X_test, y_train, y_test, scaler, label_encoders, feature_names = preprocess_data()
 
     print("✅ Pré-processamento concluído!")
-    print(f"📊 Treinando Random Forest com {X_train.shape[1]} variáveis...")
-    print(f"   Treino: {X_train.shape[0]} amostras (balanceadas com SMOTE)")
-    print(f"   Teste:  {X_test.shape[0]} amostras (originais, sem SMOTE)")
+    print(f"📊 Dados para treino prontos: {X_train.shape[0]} amostras; teste: {X_test.shape[0]} amostras")
 
-    # Criar e treinar o modelo com hiperparâmetros otimizados
-    model = RandomForestClassifier(
-        n_estimators=200,           # ↑ Mais árvores = melhor generalização
-        max_depth=15,               # Limita profundidade para evitar overfitting
-        min_samples_split=10,       # Mínimo de amostras para dividir nó
-        min_samples_leaf=4,         # Mínimo de amostras em folha
-        max_features='sqrt',        # Reduz correlação entre árvores
-        bootstrap=True,             # Amostragem com reposição
-        class_weight='balanced',    # Balanceia classes automaticamente
-        random_state=42,
-        n_jobs=-1,
-        verbose=1
-    )
+    # If a tuned model exists, load it; otherwise perform a tuning and save best model
+    model_dir = os.path.join(os.path.dirname(__file__), "models")
+    os.makedirs(model_dir, exist_ok=True)
+    reports_dir = os.path.join(os.path.dirname(__file__), "reports")
+    os.makedirs(reports_dir, exist_ok=True)
 
-    model.fit(X_train, y_train)
-    print("✅ Treinamento concluído!")
+    best_model_path = os.path.join(model_dir, "random_forest_model.joblib")
+
+    if os.path.exists(best_model_path):
+        print(f"🔁 Modelo ajustado encontrado em {best_model_path}, carregando...")
+        model = joblib.load(best_model_path)
+    else:
+        print("⚙️ Nenhum modelo ajustado encontrado — iniciando tuning do Random Forest...")
+        model, tuning_info = run_rf_tuning(X_train, y_train, feature_names)
+        # Save tuning results
+        results_json = os.path.join(reports_dir, "random_forest_tuning_results.json")
+        with open(results_json, "w", encoding="utf-8") as f:
+            json.dump(tuning_info, f, indent=2)
+        # Save markdown summary
+        md_path = os.path.join(reports_dir, "random_forest_tuning_summary.md")
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write(tuning_info.get("summary_md", ""))
+        print(f"💾 Tuning results saved: {results_json}")
+        print(f"💾 Summary saved: {md_path}")
 
     # ✅ Salvar modelo treinado no diretório correto (models/, não encoders/)
     model_dir = os.path.join(os.path.dirname(__file__), "models")
@@ -84,6 +96,93 @@ def train_random_forest():
 
     # Retorna modelo, dados de teste limpos e nomes das variáveis
     return model, X_test, y_test, feature_names
+
+
+def run_rf_tuning(X_train, y_train, feature_names, random_state=42, n_iter=40, cv_folds=5):
+    """
+    Realiza tuning de RandomForest usando RandomizedSearchCV e StratifiedKFold.
+
+    Retorna o melhor estimador e um dicionário com resultados detalhados.
+    """
+    from sklearn.ensemble import RandomForestClassifier
+
+    param_dist = {
+        'n_estimators': [100, 200, 300, 500],
+        'max_depth': [None, 6, 10, 15, 20],
+        'min_samples_split': [2, 5, 10, 15],
+        'min_samples_leaf': [1, 2, 4, 6],
+        'max_features': ['sqrt', 'log2', None],
+        'bootstrap': [True, False]
+    }
+
+    base_clf = RandomForestClassifier(class_weight='balanced', random_state=random_state, n_jobs=-1)
+
+    cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=random_state)
+
+    rnd = RandomizedSearchCV(
+        estimator=base_clf,
+        param_distributions=param_dist,
+        n_iter=n_iter,
+        scoring='roc_auc',
+        cv=cv,
+        random_state=random_state,
+        verbose=2,
+        n_jobs=-1,
+        return_train_score=False
+    )
+
+    start = time.time()
+    rnd.fit(X_train, y_train)
+    elapsed = time.time() - start
+
+    best = rnd.best_estimator_
+    best_params = rnd.best_params_
+
+    # Cross-validate best estimator to collect metrics per fold
+    scoring = {
+        'accuracy': make_scorer(accuracy_score),
+        'precision': make_scorer(precision_score),
+        'recall': make_scorer(recall_score),
+        'f1': make_scorer(f1_score),
+        'roc_auc': 'roc_auc'
+    }
+    cv_res = cross_validate(best, X_train, y_train, cv=cv, scoring=scoring, return_train_score=False)
+
+    summary = {
+        'best_params': best_params,
+        'best_score': float(rnd.best_score_),
+        'n_iter': n_iter,
+        'cv_folds': cv_folds,
+        'random_state': random_state,
+        'elapsed_seconds': elapsed,
+        'cv_metrics': {k: [float(v) for v in cv_res[k]] for k in cv_res}
+    }
+
+    # Create human-readable markdown summary
+    md_lines = [
+        "# Random Forest Tuning Summary\n",
+        f"**Best ROC-AUC (cv)**: {summary['best_score']:.6f}\n",
+        f"**Best parameters**: {json.dumps(best_params)}\n",
+        f"**Random state**: {random_state}\n",
+        f"**Elapsed (s)**: {elapsed:.1f}\n",
+        "\n## CV metrics per fold\n"
+    ]
+
+    # Collect average metrics
+    for metric in ['test_accuracy', 'test_precision', 'test_recall', 'test_f1', 'test_roc_auc']:
+        if metric in cv_res:
+            vals = cv_res[metric]
+            md_lines.append(f"- **{metric}**: mean={np.mean(vals):.4f}, std={np.std(vals):.4f}\n")
+
+    summary_md = "".join(md_lines)
+    summary['summary_md'] = summary_md
+
+    # Persist best model
+    models_dir = os.path.join(os.path.dirname(__file__), 'models')
+    os.makedirs(models_dir, exist_ok=True)
+    joblib.dump(best, os.path.join(models_dir, 'random_forest_model.joblib'))
+
+    return best, summary
 
 
 if __name__ == "__main__":
