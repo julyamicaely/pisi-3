@@ -78,16 +78,17 @@ def preprocess_data():
     df = df.drop(columns=[c for c in cols_to_drop if c in df.columns], errors="ignore")
 
     # --- REMOÇÃO DE OUTLIERS ---
-    print("✂️ Removendo outliers com método IQR...")
+    print("✂️ Removendo outliers extremos com percentis (1% e 99%)...")
 
-    numeric_cols = df.select_dtypes(include=[np.number]).columns.drop("cardio", errors="ignore")
-    for col in numeric_cols:
-        Q1 = df[col].quantile(0.25)
-        Q3 = df[col].quantile(0.75)
-        IQR = Q3 - Q1
-        lower, upper = Q1 - 1.5 * IQR, Q3 + 1.5 * IQR
-        mask = (df[col] >= lower) & (df[col] <= upper)
-        df = df[mask]
+    # Aplicar remoção de outliers APENAS em features contínuas (não binárias)
+    # Usando percentis mais suaves para preservar variabilidade
+    continuous_cols = ['ap_hi', 'ap_lo', 'age_years', 'bmi']
+    for col in continuous_cols:
+        if col in df.columns:
+            lower = df[col].quantile(0.01)  # 1º percentil
+            upper = df[col].quantile(0.99)  # 99º percentil
+            mask = (df[col] >= lower) & (df[col] <= upper)
+            df = df[mask]
 
     print(f"✅ Após remoção de outliers: {df.shape[0]} linhas restantes.")
 
@@ -150,6 +151,109 @@ def preprocess_data():
     print(f"📊 Features finais: {feature_names}")
 
     return X_train_bal, X_test_scaled, y_train_bal, y_test, scaler, label_encoders, feature_names
+
+
+def preprocess_data_for_pipeline():
+    """
+    Pré-processa dados para uso com Pipeline (NÃO aplica escalonamento).
+    
+    O Pipeline já contém RobustScaler, então não devemos escalonar aqui.
+    Esta função:
+      1. Limpa dados inconsistentes
+      2. Remove outliers
+      3. Cria features engenheiradas
+      4. Divide train/test
+      5. Aplica SMOTE no treino
+      6. ❌ NÃO ESCALONA (deixa para o pipeline)
+    
+    Retorna:
+      X_train, X_test, y_train, y_test, feature_names
+    """
+    print("📥 Carregando dados...")
+    base_path = os.path.dirname(os.path.dirname(__file__))
+    data_path = os.path.join(base_path, "EDA", "cardio_data.csv")
+    df = pd.read_csv(data_path)
+    print(f"✅ Dataset carregado com {df.shape[0]} linhas e {df.shape[1]} colunas.")
+
+    # Normalizar nomes das colunas
+    df.columns = df.columns.str.strip().str.lower()
+
+    # Validar target
+    if "cardio" not in df.columns:
+        raise ValueError("❌ Coluna 'cardio' (alvo) não encontrada!")
+
+    # --- LIMPEZA ---
+    print("🧽 Limpando valores inconsistentes...")
+
+    # Idade em anos
+    if "age" in df.columns:
+        df["age_years"] = (df["age"] // 365).astype(int)
+
+    # Remover id
+    if "id" in df.columns:
+        df = df.drop(columns=["id"])
+
+    # Calcular BMI
+    if "height" in df.columns and "weight" in df.columns:
+        df["bmi"] = df["weight"] / ((df["height"] / 100) ** 2)
+
+    # Remover registros inconsistentes
+    df = df[df["ap_hi"] >= df["ap_lo"]]
+
+    # --- ENGENHARIA DE VARIÁVEIS ---
+    print("⚙️ Preparando variáveis...")
+
+    # Binárias de risco
+    if "cholesterol" in df.columns:
+        df["cholesterol_high"] = (df["cholesterol"] > 1).astype(int)
+    if "gluc" in df.columns:
+        df["gluc_high"] = (df["gluc"] > 1).astype(int)
+
+    # Remover colunas redundantes
+    cols_to_drop = ["age", "bp_category", "bp_category_encoded", 
+                    "cholesterol", "gluc", "height", "weight"]
+    df = df.drop(columns=[c for c in cols_to_drop if c in df.columns], errors="ignore")
+
+    # --- REMOÇÃO DE OUTLIERS ---
+    print("✂️ Removendo outliers extremos com percentis (1% e 99%)...")
+    continuous_cols = ['ap_hi', 'ap_lo', 'age_years', 'bmi']
+    for col in continuous_cols:
+        if col in df.columns:
+            lower = df[col].quantile(0.01)
+            upper = df[col].quantile(0.99)
+            mask = (df[col] >= lower) & (df[col] <= upper)
+            df = df[mask]
+    print(f"✅ Após remoção de outliers: {df.shape[0]} linhas restantes.")
+
+    # --- SEPARAÇÃO ---
+    X = df.drop(columns=["cardio"])
+    y = df["cardio"]
+
+    # Label encoding para categóricas
+    for col in X.select_dtypes(include=["object"]).columns:
+        le = LabelEncoder()
+        X[col] = le.fit_transform(X[col].astype(str))
+
+    feature_names = X.columns.tolist()
+
+    # --- SPLIT ---
+    print("✂️ Dividindo dados em treino/teste (70/30)...")
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.3, random_state=42, stratify=y
+    )
+    print(f"   Treino: {X_train.shape[0]} amostras")
+    print(f"   Teste:  {X_test.shape[0]} amostras")
+
+    # --- SMOTE APENAS NO TREINO (SEM ESCALAR) ---
+    print("⚖️ Aplicando SMOTE apenas no conjunto de treino...")
+    smote = SMOTE(random_state=42)
+    X_train_bal, y_train_bal = smote.fit_resample(X_train, y_train)
+    print(f"✅ Após SMOTE: {X_train_bal.shape[0]} amostras de treino balanceadas.")
+    print(f"   Teste permanece original: {X_test.shape[0]} amostras (sem SMOTE).")
+
+    print(f"📊 Features finais: {feature_names}")
+
+    return X_train_bal, X_test, y_train_bal, y_test, feature_names
 
 
 def load_and_preprocess_data():
@@ -219,3 +323,95 @@ def load_and_preprocess_data():
     )
     
     return X_scaled, X_original, y, feature_order
+
+
+def build_feature_frame(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Prepara um DataFrame bruto para predição com o pipeline de produção.
+    
+    Esta função transforma dados brutos (do CSV ou de input manual) no formato
+    esperado pelo pipeline de Random Forest. O pipeline já contém o scaler,
+    então NÃO é necessário escalar os dados aqui.
+    
+    ⚠️ IMPORTANTE:
+       - Use esta função ANTES de chamar predict_proba()
+       - O pipeline já contém o RobustScaler
+       - Esta função apenas prepara as features, não escala
+    
+    Args:
+        df (pd.DataFrame): DataFrame com dados brutos. Pode conter colunas extras,
+                          mas deve ter as seguintes colunas mínimas:
+                          - gender (1=fem, 2=masc OU 0=fem, 1=masc)
+                          - age (em dias) OU age_years (em anos)
+                          - ap_hi (pressão sistólica)
+                          - ap_lo (pressão diastólica)
+                          - cholesterol (1=normal, 2=acima, 3=muito acima)
+                          - gluc (1=normal, 2=acima, 3=muito acima)
+                          - smoke (0 ou 1)
+                          - alco (0 ou 1)
+                          - active (0 ou 1)
+                          - height (cm) e weight (kg) OU bmi
+    
+    Returns:
+        pd.DataFrame: DataFrame com 10 colunas na ordem correta:
+                     ['gender', 'ap_hi', 'ap_lo', 'smoke', 'alco', 'active',
+                      'age_years', 'bmi', 'cholesterol_high', 'gluc_high']
+    
+    Exemplo:
+        >>> raw_data = pd.read_csv('cardio_data.csv')
+        >>> X = build_feature_frame(raw_data)
+        >>> predictions = predict_proba(X)
+    """
+    # Criar cópia para não modificar original
+    df = df.copy()
+    
+    # 1. Normalizar nomes das colunas
+    df.columns = df.columns.str.strip().str.lower()
+    
+    # 2. Converter idade de dias para anos (se necessário)
+    if 'age' in df.columns and 'age_years' not in df.columns:
+        df['age_years'] = (df['age'] // 365).astype(int)
+    
+    # 3. Ajustar gender (1=fem, 2=masc → 0=fem, 1=masc)
+    if 'gender' in df.columns:
+        if df['gender'].min() == 1:  # se estiver no formato 1/2
+            df['gender'] = df['gender'] - 1
+    
+    # 4. Calcular BMI (se não existir)
+    if 'bmi' not in df.columns:
+        if 'height' in df.columns and 'weight' in df.columns:
+            # Altura em metros, peso em kg
+            df['bmi'] = df['weight'] / ((df['height'] / 100) ** 2)
+        else:
+            raise ValueError(
+                "❌ Para calcular BMI, forneça 'height' (cm) e 'weight' (kg), "
+                "ou forneça 'bmi' diretamente."
+            )
+    
+    # 5. Criar variáveis binárias de risco
+    if 'cholesterol' in df.columns and 'cholesterol_high' not in df.columns:
+        df['cholesterol_high'] = (df['cholesterol'] > 1).astype(int)
+    
+    if 'gluc' in df.columns and 'gluc_high' not in df.columns:
+        df['gluc_high'] = (df['gluc'] > 1).astype(int)
+    
+    # 6. Selecionar features na ordem correta
+    feature_order = [
+        'gender', 'ap_hi', 'ap_lo',
+        'smoke', 'alco', 'active',
+        'age_years', 'bmi',
+        'cholesterol_high', 'gluc_high'
+    ]
+    
+    # Validar que todas as features existem
+    missing = set(feature_order) - set(df.columns)
+    if missing:
+        raise ValueError(
+            f"❌ Colunas faltando no DataFrame: {missing}\n"
+            f"   Disponíveis: {df.columns.tolist()}\n"
+            f"   Necessárias: {feature_order}"
+        )
+    
+    # Retornar apenas as features necessárias na ordem correta
+    return df[feature_order]
+

@@ -25,10 +25,13 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 try:
     from classification.preprocess_data import load_and_preprocess_data
     from classification.evaluation import compute_validation_metrics
+    from classification.prediction_service import predict_single
     USE_SHARED_FUNCTIONS = True
+    PREDICTION_SERVICE_AVAILABLE = True
 except ImportError:
     print("⚠️ Funções compartilhadas não disponíveis. Usando modo legacy.")
     USE_SHARED_FUNCTIONS = False
+    PREDICTION_SERVICE_AVAILABLE = False
 
 # Importar SHAP (opcional)
 try:
@@ -69,13 +72,59 @@ def load_data():
     }
     
     try:
-        # Carregar modelo
-        model_path = base_path / "classification" / "models" / "random_forest_model.joblib"
-        if model_path.exists():
-            data["model"] = joblib.load(model_path)
+        # Carregar PIPELINE (modelo novo corrigido)
+        pipeline_path = base_path / "classification" / "models" / "random_forest_pipeline.joblib"
+        pipeline = None
+        
+        if pipeline_path.exists():
+            pipeline = joblib.load(pipeline_path)
+            # Extrair o classificador do pipeline para uso no SHAP
+            data["model"] = pipeline.named_steps['classifier']
+            print(f"✅ Pipeline carregado! Modelo: {type(data['model']).__name__}")
+        else:
+            # Fallback para modelo antigo
+            model_path = base_path / "classification" / "models" / "random_forest_model.joblib"
+            if model_path.exists():
+                data["model"] = joblib.load(model_path)
+                print("⚠️ Usando modelo antigo (sem pipeline)")
         
         # USAR FUNÇÃO COMPARTILHADA se disponível (elimina duplicação!)
-        if USE_SHARED_FUNCTIONS and data["model"] is not None:
+        if USE_SHARED_FUNCTIONS and pipeline is not None:
+            try:
+                # Pipeline precisa de dados NÃO escalonados
+                X_scaled, X_original, y, feature_names = load_and_preprocess_data()
+                
+                data["X_test_original"] = X_original
+                data["y_test"] = y
+                data["feature_names"] = feature_names
+                
+                # Fazer predições COM O PIPELINE (usa dados originais)
+                data["y_pred"] = pipeline.predict(X_original)
+                data["y_proba"] = pipeline.predict_proba(X_original)
+                
+                # Para SHAP: precisa dos dados APÓS o scaler do pipeline
+                scaler = pipeline.named_steps['scaler']
+                X_scaled_by_pipeline = pd.DataFrame(
+                    scaler.transform(X_original),
+                    columns=feature_names,
+                    index=X_original.index
+                )
+                data["X_test"] = X_scaled_by_pipeline
+                
+                # Calcular métricas usando função compartilhada
+                data["metrics"] = compute_validation_metrics(
+                    y, 
+                    data["y_pred"], 
+                    data["y_proba"][:, 1]
+                )
+                
+                print("✅ Usando pipeline com funções compartilhadas de pré-processamento")
+            except Exception as e:
+                print(f"⚠️ Erro ao usar função compartilhada com pipeline: {e}")
+                import traceback
+                traceback.print_exc()
+                
+        elif USE_SHARED_FUNCTIONS and data["model"] is not None:
             try:
                 X_scaled, X_original, y, feature_names = load_and_preprocess_data()
                 
@@ -102,14 +151,10 @@ def load_data():
         
         # FALLBACK: Método original (legacy)
         dataset_path = base_path / "EDA" / "cardio_data.parquet"
-        scaler_path = base_path / "classification" / "scalers" / "robust_scaler.joblib"
         
-        if dataset_path.exists() and scaler_path.exists() and data["model"] is not None:
+        if dataset_path.exists():
             # Carregar dados reais
             df = pd.read_parquet(dataset_path)
-            
-            # Carregar scaler usado no treinamento
-            scaler = joblib.load(scaler_path)
             
             # Preparar features necessárias
             # Converter cholesterol e gluc para binário (normal=0, alto=1 ou 2)
@@ -119,33 +164,79 @@ def load_data():
             # Ajustar gender (dataset tem 1=feminino, 2=masculino; modelo espera 0/1)
             df['gender'] = df['gender'] - 1
             
-            # Selecionar features na ordem correta do modelo
-            feature_order = ['gender', 'height', 'weight', 'ap_hi', 'ap_lo', 
+            # Selecionar features na ordem correta do modelo (SEM height/weight)
+            feature_order = ['gender', 'ap_hi', 'ap_lo', 
                            'smoke', 'alco', 'active', 'age_years', 'bmi', 
                            'cholesterol_high', 'gluc_high']
             
-            X_test = df[feature_order].copy()
-            
-            # ✅ APLICAR SCALER (modelo foi treinado com dados escalonados!)
-            X_test_scaled = pd.DataFrame(
-                scaler.transform(X_test),
-                columns=feature_order,
-                index=X_test.index
-            )
-            
-            data["X_test"] = X_test_scaled  # Dados ESCALADOS para o modelo
-            data["X_test_original"] = X_test  # Dados ORIGINAIS para filtros
-            data["y_test"] = df['cardio'].values  # Labels REAIS do Kaggle
+            X_test_original = df[feature_order].copy()
+            data["X_test_original"] = X_test_original
+            data["y_test"] = df['cardio'].values
             data["feature_names"] = feature_order
             
-            # Fazer predições do modelo com os dados REAIS ESCALONADOS
-            data["y_pred"] = data["model"].predict(data["X_test"])
-            data["y_proba"] = data["model"].predict_proba(data["X_test"])
+            # Lógica diferente para PIPELINE vs MODELO ANTIGO
+            if pipeline is not None:
+                # PIPELINE: passa dados NÃO escalonados (pipeline faz o scaling)
+                scaler = pipeline.named_steps['scaler']
+                X_test_scaled = pd.DataFrame(
+                    scaler.transform(X_test_original),
+                    columns=feature_order,
+                    index=X_test_original.index
+                )
+                data["X_test"] = X_test_scaled
+                
+                # Predições com pipeline (usa dados originais)
+                data["y_pred"] = pipeline.predict(X_test_original)
+                data["y_proba"] = pipeline.predict_proba(X_test_original)
+                
+                # Calcular métricas
+                if USE_SHARED_FUNCTIONS:
+                    data["metrics"] = compute_validation_metrics(
+                        data["y_test"],
+                        data["y_pred"],
+                        data["y_proba"][:, 1]
+                    )
+                
+                print("✅ Usando pipeline com método legacy de carregamento de dados")
+                
+            elif data["model"] is not None:
+                # MODELO ANTIGO: precisa de scaler separado
+                scaler_path = base_path / "classification" / "scalers" / "robust_scaler.joblib"
+                
+                if scaler_path.exists():
+                    scaler = joblib.load(scaler_path)
+                    X_test_scaled = pd.DataFrame(
+                        scaler.transform(X_test_original),
+                        columns=feature_order,
+                        index=X_test_original.index
+                    )
+                    data["X_test"] = X_test_scaled
+                    
+                    # Predições com modelo antigo (usa dados escalonados)
+                    data["y_pred"] = data["model"].predict(X_test_scaled)
+                    data["y_proba"] = data["model"].predict_proba(X_test_scaled)
+                    
+                    # Calcular métricas
+                    if USE_SHARED_FUNCTIONS:
+                        data["metrics"] = compute_validation_metrics(
+                            data["y_test"],
+                            data["y_pred"],
+                            data["y_proba"][:, 1]
+                        )
+                    
+                    print("✅ Usando modelo antigo com método legacy")
+                else:
+                    print(f"⚠️ Scaler não encontrado: {scaler_path}")
+            else:
+                print("⚠️ Nenhum modelo ou pipeline disponível")
     
     except Exception as e:
         print(f"Erro ao carregar dados: {e}")
     
     # Calcular SHAP values (apenas uma amostra para performance)
+    # DESABILITADO: Muito lento no carregamento inicial
+    # Para habilitar, descomente o bloco abaixo
+    """
     if SHAP_AVAILABLE and data["model"] is not None and data["X_test"] is not None:
         try:
             print("📊 Calculando SHAP values para 2000 amostras...")
@@ -181,6 +272,8 @@ def load_data():
             print("⚠️ SHAP não está instalado. Instale com: pip install shap")
         else:
             print("⚠️ Modelo ou dados não disponíveis para SHAP")
+    """
+    print("ℹ️ SHAP desabilitado para carregamento rápido do dashboard")
     
     return data
 
@@ -331,6 +424,128 @@ layout = dbc.Container([
         "borderRadius": "0 0 30px 30px",
         "boxShadow": "0 10px 40px rgba(0,0,0,0.2)"
     }),
+    
+    # ========== SEÇÃO DE PREDIÇÃO INTERATIVA ==========
+    html.Div([
+        dbc.Card([
+            dbc.CardBody([
+                html.H3([
+                    html.I(className="bi bi-heart-pulse me-3", style={"color": PALETTE['accent']}),
+                    "🩺 Predição de Risco Cardiovascular"
+                ], className="mb-4 fw-bold text-center"),
+                
+                html.P("Insira os dados do paciente para prever o risco de doença cardiovascular:",
+                      className="text-muted text-center mb-4"),
+                
+                dbc.Row([
+                    # Coluna 1: Dados Demográficos
+                    dbc.Col([
+                        html.H5("👤 Dados Demográficos", className="mb-3 fw-bold"),
+                        
+                        html.Label("Idade (anos):", className="fw-bold mb-1"),
+                        dbc.Input(id="input-age", type="number", value=45, min=29, max=65, 
+                                 className="mb-3", placeholder="Ex: 45"),
+                        
+                        html.Label("Gênero:", className="fw-bold mb-1"),
+                        dcc.Dropdown(
+                            id="input-gender",
+                            options=[
+                                {'label': '👩 Feminino', 'value': 0},
+                                {'label': '👨 Masculino', 'value': 1}
+                            ],
+                            value=0,
+                            clearable=False,
+                            className="mb-3"
+                        ),
+                        
+                        html.Label("IMC (kg/m²):", className="fw-bold mb-1"),
+                        dbc.Input(id="input-bmi", type="number", value=25.0, min=15, max=50, step=0.1,
+                                 className="mb-3", placeholder="Ex: 25.0"),
+                    ], md=4),
+                    
+                    # Coluna 2: Pressão e Hábitos
+                    dbc.Col([
+                        html.H5("💉 Pressão Arterial", className="mb-3 fw-bold"),
+                        
+                        html.Label("Pressão Sistólica (ap_hi):", className="fw-bold mb-1"),
+                        dbc.Input(id="input-ap-hi", type="number", value=120, min=90, max=200,
+                                 className="mb-3", placeholder="Ex: 120"),
+                        
+                        html.Label("Pressão Diastólica (ap_lo):", className="fw-bold mb-1"),
+                        dbc.Input(id="input-ap-lo", type="number", value=80, min=60, max=130,
+                                 className="mb-3", placeholder="Ex: 80"),
+                        
+                        html.H5("🏃 Estilo de Vida", className="mb-3 fw-bold mt-3"),
+                        
+                        dbc.Checklist(
+                            id="input-active",
+                            options=[{'label': ' Pratica atividade física', 'value': 1}],
+                            value=[1],
+                            className="mb-2"
+                        ),
+                    ], md=4),
+                    
+                    # Coluna 3: Fatores de Risco
+                    dbc.Col([
+                        html.H5("⚠️ Fatores de Risco", className="mb-3 fw-bold"),
+                        
+                        dbc.Checklist(
+                            id="input-smoke",
+                            options=[{'label': ' Fumante', 'value': 1}],
+                            value=[],
+                            className="mb-2"
+                        ),
+                        
+                        dbc.Checklist(
+                            id="input-alco",
+                            options=[{'label': ' Consome álcool', 'value': 1}],
+                            value=[],
+                            className="mb-3"
+                        ),
+                        
+                        html.Label("Colesterol:", className="fw-bold mb-1"),
+                        dcc.Dropdown(
+                            id="input-cholesterol",
+                            options=[
+                                {'label': '✅ Normal', 'value': 0},
+                                {'label': '⚠️ Alto', 'value': 1}
+                            ],
+                            value=0,
+                            clearable=False,
+                            className="mb-3"
+                        ),
+                        
+                        html.Label("Glicose:", className="fw-bold mb-1"),
+                        dcc.Dropdown(
+                            id="input-glucose",
+                            options=[
+                                {'label': '✅ Normal', 'value': 0},
+                                {'label': '⚠️ Alto', 'value': 1}
+                            ],
+                            value=0,
+                            clearable=False,
+                            className="mb-3"
+                        ),
+                    ], md=4),
+                ]),
+                
+                # Botão de Predição
+                html.Div([
+                    dbc.Button(
+                        [html.I(className="bi bi-play-fill me-2"), "🩺 Calcular Risco"],
+                        id="btn-predict",
+                        color="primary",
+                        size="lg",
+                        className="mt-3 px-5",
+                        style={"fontSize": "18px", "fontWeight": "bold"}
+                    )
+                ], className="text-center"),
+                
+                # Resultado da Predição
+                html.Div(id="prediction-result", className="mt-4")
+            ], className="p-4")
+        ], style={"boxShadow": "0 6px 20px rgba(0,0,0,0.15)", "border": "none", "borderRadius": "15px"})
+    ], className="mb-5"),
     
     # ========== TABS DE NAVEGAÇÃO ==========
     dbc.Tabs([
@@ -681,6 +896,139 @@ layout = dbc.Container([
 
 
 # ================== CALLBACKS ==================
+
+# Callback de Predição Interativa
+@callback(
+    Output('prediction-result', 'children'),
+    Input('btn-predict', 'n_clicks'),
+    [
+        Input('input-age', 'value'),
+        Input('input-gender', 'value'),
+        Input('input-bmi', 'value'),
+        Input('input-ap-hi', 'value'),
+        Input('input-ap-lo', 'value'),
+        Input('input-smoke', 'value'),
+        Input('input-alco', 'value'),
+        Input('input-active', 'value'),
+        Input('input-cholesterol', 'value'),
+        Input('input-glucose', 'value'),
+    ],
+    prevent_initial_call=True
+)
+def predict_cardiovascular_risk(n_clicks, age, gender, bmi, ap_hi, ap_lo, 
+                               smoke, alco, active, cholesterol, glucose):
+    """Realiza predição de risco cardiovascular."""
+    if not PREDICTION_SERVICE_AVAILABLE:
+        return dbc.Alert("⚠️ Serviço de predição não disponível", color="warning")
+    
+    try:
+        # Preparar dados - checkboxes retornam lista
+        patient_data = {
+            'age_years': age,
+            'gender': gender,
+            'bmi': bmi,
+            'ap_hi': ap_hi,
+            'ap_lo': ap_lo,
+            'smoke': 1 if (smoke and len(smoke) > 0) else 0,
+            'alco': 1 if (alco and len(alco) > 0) else 0,
+            'active': 1 if (active and len(active) > 0) else 0,
+            'cholesterol_high': cholesterol,
+            'gluc_high': glucose
+        }
+        
+        # Fazer predição
+        result = predict_single(patient_data)
+        probability = result['probability']  # Já vem em porcentagem
+        risk_class = result['class']
+        
+        # Obter importâncias das features do resultado
+        feature_contributions = result.get('feature_contributions', {})
+        
+        # Determinar cor, ícone e mensagem
+        if probability < 30:
+            color = "success"
+            icon = "bi-heart-pulse-fill"
+            risk_text = "BAIXO"
+            message = "✅ O paciente apresenta baixo risco de doença cardiovascular."
+            emoji = "💚"
+        elif probability < 70:
+            color = "warning"
+            icon = "bi-exclamation-triangle-fill"
+            risk_text = "MODERADO"
+            message = "⚠️ O paciente apresenta risco moderado. Recomenda-se acompanhamento médico."
+            emoji = "💛"
+        else:
+            color = "danger"
+            icon = "bi-heart-fill"
+            risk_text = "ALTO"
+            message = "🚨 O paciente apresenta alto risco. É fundamental buscar avaliação médica."
+            emoji = "❤️"
+        
+        # Criar lista de fatores mais relevantes
+        feature_names_pt = {
+            'ap_hi': 'Pressão Sistólica',
+            'ap_lo': 'Pressão Diastólica',
+            'bmi': 'IMC',
+            'age_years': 'Idade',
+            'cholesterol_high': 'Colesterol Alto',
+            'gluc_high': 'Glicose Alta',
+            'active': 'Atividade Física',
+            'smoke': 'Tabagismo',
+            'alco': 'Consumo de Álcool',
+            'gender': 'Gênero'
+        }
+        
+        # Ordenar features por importância (top 3)
+        if feature_contributions:
+            top_features = sorted(feature_contributions.items(), 
+                                key=lambda x: abs(x[1]), 
+                                reverse=True)[:3]
+            features_list = html.Ul([
+                html.Li([
+                    html.Strong(feature_names_pt.get(feat, feat)),
+                    f": {value:.1f}% de contribuição"
+                ], className="mb-1") 
+                for feat, value in top_features
+            ], className="text-start", style={"fontSize": "14px"})
+        else:
+            features_list = html.P("Detalhes não disponíveis", 
+                                   className="text-muted small")
+        
+        return dbc.Card([
+            dbc.CardBody([
+                # Header com resultado
+                html.Div([
+                    html.H1(emoji, className="mb-3", style={"fontSize": "64px"}),
+                    html.H2(f"{probability:.1f}%", 
+                           className="mb-2 fw-bold",
+                           style={"fontSize": "48px", "color": PALETTE['accent']}),
+                    html.H4(f"Risco {risk_text}", 
+                           className="mb-3",
+                           style={"color": PALETTE['dark'], "fontWeight": "700"}),
+                    html.P(message, className="mb-4", 
+                          style={"fontSize": "16px"})
+                ], className="text-center py-3"),
+                
+                # Separador
+                html.Hr(style={"borderTop": f"2px solid {PALETTE['light']}"}),
+                
+                # Fatores mais relevantes
+                html.Div([
+                    html.H5([
+                        html.I(className="bi bi-bar-chart-fill me-2"),
+                        "📊 Principais Fatores de Influência"
+                    ], className="mb-3 fw-bold text-center"),
+                    features_list
+                ], className="mt-3")
+            ], className="p-4")
+        ], color=color, outline=True, style={
+            "borderWidth": "3px",
+            "boxShadow": "0 6px 20px rgba(0,0,0,0.15)",
+            "borderRadius": "15px"
+        })
+        
+    except Exception as e:
+        return dbc.Alert(f"❌ Erro na predição: {str(e)}", color="danger")
 
 @callback(
     Output('confusion-matrix-viz', 'figure'),
