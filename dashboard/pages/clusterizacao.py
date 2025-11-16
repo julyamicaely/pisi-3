@@ -147,9 +147,9 @@ GRAPHICS_DIR = DASHBOARD_DIR / "assets"
 EVALUATION_IMAGES = [
     "elbow_plot_v2.png",
     "silhouette_summary.png",
-    "silhouette_k04.png",
-    "silhouette_k05.png",
     "silhouette_k06.png",
+    "silhouette_k07.png",
+    "silhouette_k08.png",
     "davies_bouldin_summary.png",
 ]
 
