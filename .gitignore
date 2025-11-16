@@ -215,8 +215,6 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-teste.py
-notes.txt
 # Machine Learning Models and Artifacts
 # Arquivos grandes de modelos treinados (podem ser regenerados)
 *.joblib
@@ -255,3 +253,5 @@ classification/models/random_forest_model_*.joblib
 # Mantém apenas arquivos de configuração e features
 !classification/models/xgboost_features.json
 !classification/models/random_forest_features.json
+
+teste.py
