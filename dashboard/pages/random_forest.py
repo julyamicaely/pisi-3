@@ -13,6 +13,8 @@ import numpy as np
 import joblib
 from pathlib import Path
 from sklearn.metrics import confusion_matrix, roc_curve, auc, precision_recall_curve
+import io
+import shap
 
 # Importar estilos
 import sys
@@ -78,9 +80,14 @@ def load_data():
         
         if pipeline_path.exists():
             pipeline = joblib.load(pipeline_path)
+            data["pipeline"] = pipeline
             # Extrair o classificador do pipeline para uso no SHAP
             data["model"] = pipeline.named_steps['classifier']
             print(f"✅ Pipeline carregado! Modelo: {type(data['model']).__name__}")
+            
+            if SHAP_AVAILABLE:
+                data["explainer"] = shap.TreeExplainer(data["model"])
+                data["shap_base_value"] = data["explainer"].expected_value[1]
         else:
             # Fallback para modelo antigo
             model_path = base_path / "classification" / "models" / "random_forest_model.joblib"
@@ -506,7 +513,42 @@ layout = dbc.Container([
                 ], className="text-center"),
                 
                 # Resultado da Predição
-                html.Div(id="prediction-result", className="mt-4")
+                html.Div(id="prediction-result", className="mt-4"),
+                
+                # SHAP Force Plot Container
+                html.Div([
+                    html.H5("🔬 Explicação da Predição (SHAP Force Plot)", className="mt-4 mb-3 fw-bold text-center"),
+                    html.Iframe(id='shap-force-plot-live', style={'width': '100%', 'height': '140px', 'border': 'none'}),
+                    
+                    # Explicação de como ler o gráfico
+                    html.Div([
+                        html.H6("📖 Como interpretar este gráfico:", className="mt-3 mb-2 fw-bold text-center"),
+                        html.P([
+                            html.Strong("Valor Base (base value): "),
+                            "Predição média do modelo para todos os pacientes (cerca de 50%). É o ponto de partida."
+                        ], className="text-muted small mb-1"),
+                        html.P([
+                            html.Strong("Barras Vermelhas: "),
+                            "Empurram a predição para ",
+                            html.Strong("MAIOR risco", style={"color": "#dc3545"}),
+                            " de doença cardiovascular."
+                        ], className="text-muted small mb-1"),
+                        html.P([
+                            html.Strong("Barras Azuis: "),
+                            "Empurram a predição para ",
+                            html.Strong("MENOR risco", style={"color": "#007bff"}),
+                            " de doença cardiovascular."
+                        ], className="text-muted small mb-1"),
+                        html.P([
+                            html.Strong("Predição Final (número em destaque): "),
+                            "Probabilidade específica deste paciente após considerar todos os fatores individuais."
+                        ], className="text-muted small mb-0")
+                    ], className="mt-3 p-3", style={
+                        "backgroundColor": "#f8f9fa", 
+                        "borderRadius": "8px", 
+                        "border": "1px solid #e9ecef"
+                    })
+                ], id='shap-plot-container', style={'display': 'none'})
             ], className="p-4")
         ], style={"boxShadow": "0 6px 20px rgba(0,0,0,0.15)", "border": "none", "borderRadius": "15px"})
     ], className="mb-5"),
@@ -865,7 +907,9 @@ layout = dbc.Container([
 
 # Callback de Predição Interativa
 @callback(
-    Output('prediction-result', 'children'),
+    [Output('prediction-result', 'children'),
+     Output('shap-force-plot-live', 'srcDoc'),
+     Output('shap-plot-container', 'style')],
     Input('btn-predict', 'n_clicks'),
     [
         Input('input-age', 'value'),
@@ -883,11 +927,14 @@ layout = dbc.Container([
 )
 def predict_cardiovascular_risk(n_clicks, age, gender, bmi, ap_hi, ap_lo, 
                                smoke, alco, active, cholesterol, glucose):
-    """Realiza predição de risco cardiovascular."""
-    if not PREDICTION_SERVICE_AVAILABLE:
-        return dbc.Alert("⚠️ Serviço de predição não disponível", color="warning")
-    
+    """Realiza predição de risco cardiovascular com SHAP force plot."""
     try:
+        # Get components from global data
+        pipeline = rf_data['pipeline']
+        explainer = rf_data['explainer']
+        base_value = rf_data['shap_base_value']
+        feature_names = rf_data['feature_names']
+        
         # Preparar dados - checkboxes retornam lista
         patient_data = {
             'age_years': age,
@@ -902,13 +949,44 @@ def predict_cardiovascular_risk(n_clicks, age, gender, bmi, ap_hi, ap_lo,
             'gluc_high': glucose
         }
         
-        # Fazer predição
-        result = predict_single(patient_data)
-        probability = result['probability']  # Já vem em porcentagem
-        risk_class = result['class']
+        # Create DataFrame in correct order
+        patient_df = pd.DataFrame([patient_data], columns=feature_names)
         
-        # Obter importâncias das features do resultado
-        feature_contributions = result.get('feature_contributions', {})
+        # Get prediction probability
+        probability = pipeline.predict_proba(patient_df)[0][1] * 100
+        
+        # Scale data for SHAP
+        scaler = pipeline.named_steps['scaler']
+        patient_df_scaled = pd.DataFrame(scaler.transform(patient_df), columns=feature_names)
+        
+        # Translate feature names to Portuguese for SHAP plot
+        feature_translations = {
+            'gender': 'Sexo',
+            'ap_hi': 'Pressão Sistólica', 
+            'ap_lo': 'Pressão Diastólica',
+            'smoke': 'Fumante',
+            'alco': 'Álcool', 
+            'active': 'Atividade Física',
+            'age_years': 'Idade',
+            'bmi': 'IMC',
+            'cholesterol_high': 'Colesterol Alto',
+            'gluc_high': 'Glicose Alta'
+        }
+        patient_df_scaled.columns = [feature_translations.get(col, col) for col in patient_df_scaled.columns]
+        
+        # Compute SHAP values
+        shap_values_array = explainer.shap_values(patient_df_scaled)
+        
+        # For binary classification, SHAP returns (n_samples, n_features, n_classes)
+        # Extract SHAP values for Class 1 (Heart Disease)
+        shap_values_class_1 = shap_values_array[0, :, 1]
+        
+        # Generate force plot
+        force_plot = shap.force_plot(base_value, shap_values_class_1, patient_df_scaled.iloc[0], matplotlib=False)
+        
+        # Save plot to HTML string
+        plot_html_string = io.StringIO()
+        shap.save_html(plot_html_string, force_plot)
         
         # Determinar cor, ícone e mensagem
         if probability < 30:
@@ -930,37 +1008,11 @@ def predict_cardiovascular_risk(n_clicks, age, gender, bmi, ap_hi, ap_lo,
             message = "🚨 O paciente apresenta alto risco. É fundamental buscar avaliação médica."
             emoji = "❤️"
         
-        # Criar lista de fatores mais relevantes
-        feature_names_pt = {
-            'ap_hi': 'Pressão Sistólica',
-            'ap_lo': 'Pressão Diastólica',
-            'bmi': 'IMC',
-            'age_years': 'Idade',
-            'cholesterol_high': 'Colesterol Alto',
-            'gluc_high': 'Glicose Alta',
-            'active': 'Atividade Física',
-            'smoke': 'Tabagismo',
-            'alco': 'Consumo de Álcool',
-            'gender': 'Gênero'
-        }
+        # Features explanation (SHAP plot provides detailed explanation)
+        features_list = html.P("🔬 Veja a explicação detalhada SHAP abaixo para entender como cada feature contribuiu para esta predição.", 
+                               className="text-muted small")
         
-        # Ordenar features por importância (top 3)
-        if feature_contributions:
-            top_features = sorted(feature_contributions.items(), 
-                                key=lambda x: abs(x[1]), 
-                                reverse=True)[:3]
-            features_list = html.Ul([
-                html.Li([
-                    html.Strong(feature_names_pt.get(feat, feat)),
-                    f": {value:.1f}% de contribuição"
-                ], className="mb-1") 
-                for feat, value in top_features
-            ], className="text-start", style={"fontSize": "14px"})
-        else:
-            features_list = html.P("Detalhes não disponíveis", 
-                                   className="text-muted small")
-        
-        return dbc.Card([
+        result_card = dbc.Card([
             dbc.CardBody([
                 # Header com resultado
                 html.Div([
@@ -993,8 +1045,11 @@ def predict_cardiovascular_risk(n_clicks, age, gender, bmi, ap_hi, ap_lo,
             "borderRadius": "15px"
         })
         
+        return result_card, plot_html_string.getvalue(), {'display': 'block'}
+        
     except Exception as e:
-        return dbc.Alert(f"❌ Erro na predição: {str(e)}", color="danger")
+        error_card = dbc.Alert(f"❌ Erro na predição: {str(e)}", color="danger")
+        return error_card, "", {'display': 'none'}
 
 @callback(
     Output('confusion-matrix-viz', 'figure'),
