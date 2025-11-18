@@ -92,13 +92,13 @@ recall = recall_score(y_test, y_pred)
 f1 = f1_score(y_test, y_pred)
 report = classification_report(y_test, y_pred)
 
-report_content = f"""Best Parameters: {grid_search.best_params_}
-Accuracy: {accuracy}
-Precision: {precision}
+report_content = f"""Melhores Parâmetros: {grid_search.best_params_}
+Acurácia: {accuracy}
+Precisão: {precision}
 Recall: {recall}
 F1-Score: {f1}
 
-Classification Report:
+Relatório de Classificação:
 {report}
 """
 
@@ -113,7 +113,7 @@ X_with_target['cardio'] = y_train
 for feature in continuous_features:
     plt.figure(figsize=(10, 6))
     sns.histplot(data=X_with_target, x=feature, hue='cardio', kde=True, palette='viridis', element='step')
-    plt.title(f'Distribution of {feature.replace("_", " ").title()} by Cardiovascular Disease')
+    plt.title(f'Distribuição de {feature.replace("_", " ").title()} por Doença Cardiovascular')
     plt.savefig(f'classification/results/distributions/dist_{feature}.png')
     plt.close()
 
@@ -121,9 +121,9 @@ for feature in continuous_features:
 cm = confusion_matrix(y_test, y_pred)
 plt.figure(figsize=(8, 6))
 sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-plt.title('Naive Bayes Confusion Matrix')
-plt.xlabel('Predicted')
-plt.ylabel('Actual')
+plt.title('Matriz de Confusão - Naive Bayes')
+plt.xlabel('Previsto')
+plt.ylabel('Real')
 plt.savefig('classification/results/naive_bayes_confusion_matrix.png')
 plt.close()
 
@@ -131,11 +131,11 @@ plt.close()
 fpr, tpr, _ = roc_curve(y_test, y_prob)
 roc_auc = auc(fpr, tpr)
 plt.figure(figsize=(8, 6))
-plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
+plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'Curva ROC (área = {roc_auc:.2f})')
 plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.title('Naive Bayes ROC Curve')
+plt.xlabel('Taxa de Falsos Positivos')
+plt.ylabel('Taxa de Verdadeiros Positivos')
+plt.title('Curva ROC - Naive Bayes')
 plt.legend(loc='lower right')
 plt.savefig('classification/results/naive_bayes_roc_curve.png')
 plt.close()
@@ -144,12 +144,12 @@ plt.close()
 precision_curve, recall_curve, _ = precision_recall_curve(y_test, y_prob)
 pr_auc = auc(recall_curve, precision_curve)
 plt.figure(figsize=(8, 6))
-plt.plot(recall_curve, precision_curve, lw=2, color='blue', label=f'Precision-Recall curve (area = {pr_auc:.2f})')
+plt.plot(recall_curve, precision_curve, lw=2, color='blue', label=f'Curva Precisão-Recall (área = {pr_auc:.2f})')
 plt.xlabel('Recall')
-plt.ylabel('Precision')
-plt.title('Naive Bayes Precision-Recall Curve')
+plt.ylabel('Precisão')
+plt.title('Curva Precisão-Recall - Naive Bayes')
 plt.legend(loc='best')
 plt.savefig('classification/results/naive_bayes_pr_curve.png')
 plt.close()
 
-print("Naive Bayes training complete. Artifacts saved.")
+print("Treinamento do Naive Bayes concluído. Artefatos salvos.")
