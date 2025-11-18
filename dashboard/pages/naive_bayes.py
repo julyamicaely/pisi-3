@@ -181,27 +181,64 @@ layout = dbc.Container([
     html.H3("Visualizações de Desempenho do Modelo", className="my-4 text-center"),
     dbc.Tabs([
         dbc.Tab(label="Matriz de Confusão", children=[
-            html.Img(src=confusion_matrix_img, style={'width': '100%', 'max-width': '600px', 'margin': 'auto', 'display': 'block'})
+            html.Div([
+                html.P("A Matriz de Confusão mostra o desempenho do modelo em termos de predições corretas e incorretas. Cada célula representa o número de casos para uma combinação específica de valor real e predito.", className="text-muted mb-3"),
+                html.Ul([
+                    html.Li("Verdadeiro Positivo (TP): Casos positivos corretamente identificados"),
+                    html.Li("Verdadeiro Negativo (TN): Casos negativos corretamente identificados"),
+                    html.Li("Falso Positivo (FP): Casos negativos incorretamente classificados como positivos"),
+                    html.Li("Falso Negativo (FN): Casos positivos incorretamente classificados como negativos")
+                ], className="text-muted mb-3"),
+                html.Img(src=confusion_matrix_img, style={'width': '100%', 'max-width': '600px', 'margin': 'auto', 'display': 'block'})
+            ])
         ]),
         dbc.Tab(label="Curva ROC", children=[
-            html.Img(src=roc_curve_img, style={'width': '100%', 'max-width': '600px', 'margin': 'auto', 'display': 'block'})
+            html.Div([
+                html.P("A Curva ROC (Receiver Operating Characteristic) mostra a relação entre a taxa de verdadeiros positivos e a taxa de falsos positivos em diferentes limiares de classificação.", className="text-muted mb-3"),
+                html.Ul([
+                    html.Li("Eixo X: Taxa de Falsos Positivos (FPR) = FP / (FP + TN)"),
+                    html.Li("Eixo Y: Taxa de Verdadeiros Positivos (TPR) = TP / (TP + FN)"),
+                    html.Li("AUC (Área sob a Curva): Mede a capacidade discriminativa do modelo (0.5 = aleatório, 1.0 = perfeito)"),
+                    html.Li("Quanto mais próxima a curva estiver do canto superior esquerdo, melhor o desempenho")
+                ], className="text-muted mb-3"),
+                html.Img(src=roc_curve_img, style={'width': '100%', 'max-width': '600px', 'margin': 'auto', 'display': 'block'})
+            ])
         ]),
         dbc.Tab(label="Curva Precisão-Recall", children=[
-            html.Img(src=pr_curve_img, style={'width': '100%', 'max-width': '600px', 'margin': 'auto', 'display': 'block'})
+            html.Div([
+                html.P("A Curva Precisão-Recall mostra a relação entre precisão e Recall em diferentes limiares de classificação, útil especialmente para datasets desbalanceados.", className="text-muted mb-3"),
+                html.Ul([
+                    html.Li("Precisão: Proporção de predições positivas que são realmente positivas"),
+                    html.Li("Recall: Proporção de casos positivos reais que foram identificados corretamente"),
+                    html.Li("Eixo X: Recall (Recall/Sensitivity)"),
+                    html.Li("Eixo Y: Precisão (Precision)"),
+                    html.Li("Quanto maior a área sob a curva, melhor o desempenho do modelo")
+                ], className="text-muted mb-3"),
+                html.Img(src=pr_curve_img, style={'width': '100%', 'max-width': '600px', 'margin': 'auto', 'display': 'block'})
+            ])
         ]),
         dbc.Tab(label="Distribuições de Características", children=[
-            dbc.Row([
-                dbc.Col([
-                    html.Label("Selecione Característica:", className="fw-bold"),
-                    dcc.Dropdown(
-                        id='dist-feature-dropdown',
-                        options=[{'label': feat.replace("_", " ").title(), 'value': feat} for feat in continuous_features],
-                        value=continuous_features[0],
-                        clearable=False
-                    ),
-                ], width=6, className="mx-auto mt-4")
-            ]),
-            html.Img(id='dist-plot-img', style={'width': '100%', 'max-width': '800px', 'margin': 'auto', 'display': 'block', 'marginTop': '20px'})
+            html.Div([
+                html.P("Os gráficos de distribuição mostram como cada característica se distribui entre pacientes com e sem doença cardiovascular, ajudando a entender a importância de cada variável.", className="text-muted mb-3"),
+                html.Ul([
+                    html.Li("Comparação visual entre classes: Azul representa pacientes sem doença, laranja com doença"),
+                    html.Li("Sobreposição indica características com baixo poder discriminativo"),
+                    html.Li("Separação clara indica características importantes para a classificação"),
+                    html.Li("Curvas KDE (Kernel Density Estimation) mostram a distribuição suavizada dos dados")
+                ], className="text-muted mb-3"),
+                dbc.Row([
+                    dbc.Col([
+                        html.Label("Selecione Característica:", className="fw-bold"),
+                        dcc.Dropdown(
+                            id='dist-feature-dropdown',
+                            options=[{'label': feat.replace("_", " ").title(), 'value': feat} for feat in continuous_features],
+                            value=continuous_features[0],
+                            clearable=False
+                        ),
+                    ], width=6, className="mx-auto mt-4")
+                ]),
+                html.Img(id='dist-plot-img', style={'width': '100%', 'max-width': '800px', 'margin': 'auto', 'display': 'block', 'marginTop': '20px'})
+            ])
         ]),
     ]),
 
