@@ -184,8 +184,8 @@ layout = dbc.Container([
             html.Div([
                 html.P("A Matriz de Confusão mostra o desempenho do modelo em termos de predições corretas e incorretas. Cada célula representa o número de casos para uma combinação específica de valor real e predito.", className="text-muted mb-3"),
                 html.Ul([
-                    html.Li("Verdadeiro Positivo (TP): Casos positivos corretamente identificados"),
-                    html.Li("Verdadeiro Negativo (TN): Casos negativos corretamente identificados"),
+                    html.Li("Verdadeiro Positivo (VP): Casos positivos corretamente identificados"),
+                    html.Li("Verdadeiro Negativo (VN): Casos negativos corretamente identificados"),
                     html.Li("Falso Positivo (FP): Casos negativos incorretamente classificados como positivos"),
                     html.Li("Falso Negativo (FN): Casos positivos incorretamente classificados como negativos")
                 ], className="text-muted mb-3"),
@@ -221,7 +221,7 @@ layout = dbc.Container([
             html.Div([
                 html.P("Os gráficos de distribuição mostram como cada característica se distribui entre pacientes com e sem doença cardiovascular, ajudando a entender a importância de cada variável.", className="text-muted mb-3"),
                 html.Ul([
-                    html.Li("Comparação visual entre classes: Azul representa pacientes sem doença, laranja com doença"),
+                    html.Li("Comparação visual entre classes: Azul representa pacientes sem doença, verde representa pacientes com doença"),
                     html.Li("Sobreposição indica características com baixo poder discriminativo"),
                     html.Li("Separação clara indica características importantes para a classificação"),
                     html.Li("Curvas KDE (Kernel Density Estimation) mostram a distribuição suavizada dos dados")
