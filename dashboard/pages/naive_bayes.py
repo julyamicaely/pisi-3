@@ -46,16 +46,16 @@ def create_metric_card(title, value, is_highlighted=False):
     )
 
 def read_report_metrics():
-    """Reads metrics from the report file."""
-    metrics = {"Accuracy": "N/A", "Precision": "N/A", "Recall": "N/A", "F1-Score": "N/A", "report": "Report not found."}
+    """Lê métricas do arquivo de relatório."""
+    metrics = {"Accuracy": "N/A", "Precision": "N/A", "Recall": "N/A", "F1-Score": "N/A", "report": "Relatório não encontrado."}
     try:
         with open(REPORTS_PATH / "naive_bayes_report.txt", "r") as f:
             content = f.read()
             metrics["report"] = content
             
             # Use regex to find the values
-            accuracy_match = re.search(r"Accuracy: ([\d.]+)", content)
-            precision_match = re.search(r"Precision: ([\d.]+)", content)
+            accuracy_match = re.search(r"Acurácia: ([\d.]+)", content)
+            precision_match = re.search(r"Precisão: ([\d.]+)", content)
             recall_match = re.search(r"Recall: ([\d.]+)", content)
             f1_match = re.search(r"F1-Score: ([\d.]+)", content)
 
@@ -69,7 +69,7 @@ def read_report_metrics():
                 metrics["F1-Score"] = f"{float(f1_match.group(1)) * 100:.2f}%"
 
     except FileNotFoundError:
-        print("Report file not found.")
+        print("Arquivo de relatório não encontrado.")
     return metrics
 
 def encode_image(image_path):
@@ -94,56 +94,56 @@ continuous_features = ['age_years', 'ap_hi', 'ap_lo', 'bmi']
 # --- Live Prediction Components ---
 prediction_card = dbc.Card(
     dbc.CardBody([
-        html.H4("🔮 Live Prediction", className="card-title text-center mb-4"),
+        html.H4("🔮 Predição em Tempo Real", className="card-title text-center mb-4"),
         dbc.Row([
             # Column 1: Continuous Features
             dbc.Col([
-                dbc.Label("Age (Years)", html_for="nb-age-years"),
-                dbc.Input(id="nb-age-years", type="number", placeholder="e.g., 50", min=3, max=120),
+                dbc.Label("Idade (Anos)", html_for="nb-age-years"),
+                dbc.Input(id="nb-age-years", type="number", placeholder="ex.: 50", min=3, max=120),
                 html.Br(),
-                dbc.Label("Height (cm)", html_for="nb-height"),
-                dbc.Input(id="nb-height", type="number", placeholder="e.g., 168", min=30, max=220),
+                dbc.Label("Altura (cm)", html_for="nb-height"),
+                dbc.Input(id="nb-height", type="number", placeholder="ex.: 168", min=30, max=220),
                 html.Br(),
-                dbc.Label("Weight (kg)", html_for="nb-weight"),
-                dbc.Input(id="nb-weight", type="number", placeholder="e.g., 70.0", min=5, max=400, step=0.1),
+                dbc.Label("Peso (kg)", html_for="nb-weight"),
+                dbc.Input(id="nb-weight", type="number", placeholder="ex.: 70.0", min=5, max=400, step=0.1),
                 html.Br(),
-                dbc.Label("Systolic Blood Pressure (ap_hi)", html_for="nb-ap-hi"),
-                dbc.Input(id="nb-ap-hi", type="number", placeholder="e.g., 120", min=60, max=240),
+                dbc.Label("Pressão Sistólica (ap_hi)", html_for="nb-ap-hi"),
+                dbc.Input(id="nb-ap-hi", type="number", placeholder="ex.: 120", min=60, max=240),
                 html.Br(),
-                dbc.Label("Diastolic Blood Pressure (ap_lo)", html_for="nb-ap-lo"),
-                dbc.Input(id="nb-ap-lo", type="number", placeholder="e.g., 80", min=40, max=180),
+                dbc.Label("Pressão Diastólica (ap_lo)", html_for="nb-ap-lo"),
+                dbc.Input(id="nb-ap-lo", type="number", placeholder="ex.: 80", min=40, max=180),
             ], md=6),
             # Column 2: Categorical Features
             dbc.Col([
-                dbc.Label("Gender", html_for="nb-gender"),
-                dcc.Dropdown(id="nb-gender", options=[{'label': 'Female', 'value': 0}, {'label': 'Male', 'value': 1}], placeholder="Select..."),
+                dbc.Label("Gênero", html_for="nb-gender"),
+                dcc.Dropdown(id="nb-gender", options=[{'label': 'Feminino', 'value': 0}, {'label': 'Masculino', 'value': 1}], placeholder="Selecione..."),
                 html.Br(),
-                dbc.Label("Cholesterol", html_for="nb-cholesterol"),
+                dbc.Label("Colesterol", html_for="nb-cholesterol"),
                 dcc.Dropdown(id="nb-cholesterol", options=[
                     {'label': 'Normal', 'value': 1},
-                    {'label': 'Above Normal', 'value': 2},
-                    {'label': 'Well Above Normal', 'value': 3}
-                ], placeholder="Select..."),
+                    {'label': 'Acima do Normal', 'value': 2},
+                    {'label': 'Muito Acima do Normal', 'value': 3}
+                ], placeholder="Selecione..."),
                 html.Br(),
-                dbc.Label("Glucose", html_for="nb-gluc"),
+                dbc.Label("Glicose", html_for="nb-gluc"),
                 dcc.Dropdown(id="nb-gluc", options=[
                     {'label': 'Normal', 'value': 1},
-                    {'label': 'Above Normal', 'value': 2},
-                    {'label': 'Well Above Normal', 'value': 3}
-                ], placeholder="Select..."),
+                    {'label': 'Acima do Normal', 'value': 2},
+                    {'label': 'Muito Acima do Normal', 'value': 3}
+                ], placeholder="Selecione..."),
                 html.Br(),
-                dbc.Label("Smoker?", html_for="nb-smoke"),
-                dcc.Dropdown(id="nb-smoke", options=[{'label': 'No', 'value': 0}, {'label': 'Yes', 'value': 1}], placeholder="Select..."),
+                dbc.Label("Fumante?", html_for="nb-smoke"),
+                dcc.Dropdown(id="nb-smoke", options=[{'label': 'Não', 'value': 0}, {'label': 'Sim', 'value': 1}], placeholder="Selecione..."),
                 html.Br(),
-                dbc.Label("Drinks Alcohol?", html_for="nb-alco"),
-                dcc.Dropdown(id="nb-alco", options=[{'label': 'No', 'value': 0}, {'label': 'Yes', 'value': 1}], placeholder="Select..."),
+                dbc.Label("Bebe Álcool?", html_for="nb-alco"),
+                dcc.Dropdown(id="nb-alco", options=[{'label': 'Não', 'value': 0}, {'label': 'Sim', 'value': 1}], placeholder="Selecione..."),
                 html.Br(),
-                dbc.Label("Physically Active?", html_for="nb-active"),
-                dcc.Dropdown(id="nb-active", options=[{'label': 'No', 'value': 0}, {'label': 'Yes', 'value': 1}], placeholder="Select..."),
+                dbc.Label("Ativo Fisicamente?", html_for="nb-active"),
+                dcc.Dropdown(id="nb-active", options=[{'label': 'Não', 'value': 0}, {'label': 'Sim', 'value': 1}], placeholder="Selecione..."),
             ], md=6),
         ]),
         html.Div(
-            dbc.Button("Get Prediction", id="nb-predict-button", color="primary", n_clicks=0, className="mt-4 w-100"),
+            dbc.Button("Obter Predição", id="nb-predict-button", color="primary", n_clicks=0, className="mt-4 w-100"),
             className="d-grid gap-2",
         ),
         html.Div(id="nb-prediction-output", className="mt-4 text-center fs-4"),
@@ -156,13 +156,13 @@ layout = dbc.Container([
     # ========== HERO SECTION ==========
     html.Div([
         html.Div([
-            html.H1("📊 Naive Bayes Classifier",
+            html.H1("📊 Classificador Naive Bayes",
                    className="display-4 fw-bold text-white mb-3"),
-            html.P("Probabilistic Classification for Cardiovascular Risk",
+            html.P("Classificação Probabilística para Risco Cardiovascular",
                   className="lead text-white-50 mb-4"),
             dbc.Row([
-                dbc.Col(create_metric_card("Accuracy", metrics["Accuracy"])),
-                dbc.Col(create_metric_card("Precision", metrics["Precision"], is_highlighted=True)),
+                dbc.Col(create_metric_card("Precisão", metrics["Precision"], is_highlighted=True)),
+                dbc.Col(create_metric_card("Acurácia", metrics["Accuracy"])),
                 dbc.Col(create_metric_card("Recall", metrics["Recall"])),
                 dbc.Col(create_metric_card("F1-Score", metrics["F1-Score"])),
             ])
@@ -178,21 +178,21 @@ layout = dbc.Container([
     prediction_card,
 
     # Visualizations
-    html.H3("Model Performance Visualizations", className="my-4 text-center"),
+    html.H3("Visualizações de Desempenho do Modelo", className="my-4 text-center"),
     dbc.Tabs([
-        dbc.Tab(label="Confusion Matrix", children=[
+        dbc.Tab(label="Matriz de Confusão", children=[
             html.Img(src=confusion_matrix_img, style={'width': '100%', 'max-width': '600px', 'margin': 'auto', 'display': 'block'})
         ]),
-        dbc.Tab(label="ROC Curve", children=[
+        dbc.Tab(label="Curva ROC", children=[
             html.Img(src=roc_curve_img, style={'width': '100%', 'max-width': '600px', 'margin': 'auto', 'display': 'block'})
         ]),
-        dbc.Tab(label="Precision-Recall Curve", children=[
+        dbc.Tab(label="Curva Precisão-Recall", children=[
             html.Img(src=pr_curve_img, style={'width': '100%', 'max-width': '600px', 'margin': 'auto', 'display': 'block'})
         ]),
-        dbc.Tab(label="Feature Distributions", children=[
+        dbc.Tab(label="Distribuições de Características", children=[
             dbc.Row([
                 dbc.Col([
-                    html.Label("Select Feature:", className="fw-bold"),
+                    html.Label("Selecione Característica:", className="fw-bold"),
                     dcc.Dropdown(
                         id='dist-feature-dropdown',
                         options=[{'label': feat.replace("_", " ").title(), 'value': feat} for feat in continuous_features],
@@ -208,7 +208,7 @@ layout = dbc.Container([
     html.Hr(className="my-5"),
 
     # Classification Report
-    html.H3("Classification Report", className="my-4"),
+    html.H3("Relatório de Classificação", className="my-4"),
     dbc.Card(
         dbc.CardBody([
             dcc.Markdown(f"```\n{metrics['report']}\n```")
@@ -238,7 +238,7 @@ def predict_live(n_clicks, age_years, height, weight, ap_hi, ap_lo, gender, chol
 
     # Validate that all fields are filled
     if any(v is None for v in [age_years, height, weight, ap_hi, ap_lo, gender, cholesterol, gluc, smoke, alco, active]):
-        return dbc.Alert("Please fill in all fields to get a prediction.", color="warning")
+        return dbc.Alert("Por favor, preencha todos os campos para obter uma predição.", color="warning")
 
     try:
         # Load the entire pipeline (preprocessor + model)
@@ -264,21 +264,21 @@ def predict_live(n_clicks, age_years, height, weight, ap_hi, ap_lo, gender, chol
 
         # Display result
         if prediction == 1:
-            result_text = "High Risk of Cardiovascular Disease"
+            result_text = "Alto Risco de Doença Cardiovascular"
             result_color = "danger"
             prob_value = f"{probability[1]*100:.2f}%"
         else:
-            result_text = "Low Risk of Cardiovascular Disease"
+            result_text = "Baixo Risco de Doença Cardiovascular"
             result_color = "success"
             prob_value = f"{probability[0]*100:.2f}%"
 
         return dbc.Alert([
             html.H5(result_text, className="alert-heading"),
-            html.P(f"Confidence: {prob_value}")
+            html.P(f"Confiança: {prob_value}")
         ], color=result_color)
 
     except Exception as e:
-        return dbc.Alert(f"Prediction failed: {e}", color="danger")
+        return dbc.Alert(f"Falha na predição: {e}", color="danger")
 
 @callback(
     Output('dist-plot-img', 'src'),

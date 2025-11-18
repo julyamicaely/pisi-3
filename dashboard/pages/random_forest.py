@@ -690,7 +690,7 @@ layout = dbc.Container([
             ]
         ),
         
-        # ========== TAB 3: INTERPRETAÇÃO (FEATURE IMPORTANCE) ==========
+        # ========== TAB 3: INTERPRETAÇÃO (IMPORTÂNCIA DAS FEATURES) ==========
         dbc.Tab(
             label="⭐ Interpretation",
             tab_id="tab-interpretation",
