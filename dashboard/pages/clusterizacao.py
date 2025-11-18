@@ -22,10 +22,20 @@ pio.templates.default = "plotly_white"
 try:
     sys.path.insert(0, str(Path(__file__).parent.parent))
     from components.utils import make_page_header, make_card, make_tabs, build_metric_grid
-    print("Componentes customizados de 'utils' carregados com sucesso.")
+    from styles import PALETTE
+    print("✅ Componentes customizados carregados com sucesso.")
     
 except ImportError:
-    print("Aviso: Componentes customizados não encontrados. Usando componentes padrão.")
+    print("⚠️ Aviso: Componentes customizados não encontrados. Usando componentes padrão.")
+    
+    # Palette padrão para fallback
+    PALETTE = {
+        'gradient_start': '#667eea',
+        'gradient_end': '#764ba2',
+        'accent': '#f093fb',
+        'dark': '#2d3748',
+        'light': '#f7fafc'
+    }
     
     # --- Funções padrão para fallback ---
     def make_page_header(title, subtitle, icon=""):
@@ -258,16 +268,9 @@ def layout():
 
     artifacts = load_data_and_artifacts()
     
-    page_header = make_page_header(
-        "Análise de Clusterização (K=6)",
-        "Segmentação de pacientes com base em perfis de risco (K-Means)",
-        icon="diagram-3-fill"
-    )
-    
     if artifacts["df"] is None:
         error_msg = artifacts["error"] or "Dados não encontrados."
         return html.Div([
-            page_header,
             dbc.Alert(
                 f"⚠️ Erro ao carregar dados: {error_msg}.",
                 color="danger",
@@ -276,13 +279,136 @@ def layout():
         ])
     
     # ================== Seção de Métricas ==================
+    # Calcular métricas dinâmicas
+    df = artifacts["df"]
+    validation_sorted = artifacts["validation"].sort_values(by="Taxa de Risco (%)", ascending=False)
+    
+    maior_risco_cluster = int(validation_sorted.iloc[0][TRADUCOES['cluster']])
+    maior_risco_valor = validation_sorted.iloc[0]["Taxa de Risco (%)"]
+    
+    menor_risco_cluster = int(validation_sorted.iloc[-1][TRADUCOES['cluster']])
+    menor_risco_valor = validation_sorted.iloc[-1]["Taxa de Risco (%)"]
+    
+    idade_media = df['age_years'].mean()
+    pacientes_risco_alto = (df['cardio'] == 1).sum()
+    percentual_risco = (pacientes_risco_alto / len(df)) * 100
+    
+    print(f"✅ Clusterização K=6 carregada com sucesso! Total de {len(df):,} pacientes.")
+    
+    # Hero Section com métricas estilizadas
     metrics_section = html.Div([
-        build_metric_grid([
-            {"label": "Número de Clusters (K)", "value": 6},
-            {"label": "Total de Pacientes", "value": len(artifacts["df"]), "format_fn": lambda x: f"{x:,.0f}"},
-            {"label": "Cluster de Maior Risco", "value": "Cluster 1"},
-            {"label": "Risco (Cluster 1)", "value": f"{artifacts['validation'].iloc[0, 1]:.1f}%"},
-        ], cols=4),
+        html.Div([
+            html.Div([
+                html.H1("🔬 Análise de Clusterização (K=6)", 
+                       className="display-4 fw-bold text-white mb-3"),
+                html.P("Segmentação de pacientes com base em perfis de risco cardiovascular", 
+                      className="lead text-white-50 mb-4"),
+                
+                # MÉTRICAS PRINCIPAIS
+                dbc.Row([
+                    # Métrica 1: Total de Clusters
+                    dbc.Col([
+                        html.Div([
+                            html.Div([
+                                html.I(className="bi bi-diagram-3-fill", 
+                                      style={"fontSize": "28px", "color": "white", "marginBottom": "8px"}),
+                                html.P("Clusters (K)", className="text-white-50 mb-1", 
+                                      style={"fontSize": "13px"}),
+                                html.H2("6", 
+                                       className="text-white mb-0 fw-bold"),
+                            ], className="text-center p-3", 
+                               style={"backgroundColor": "rgba(255,255,255,0.15)", 
+                                      "borderRadius": "12px", "border": "2px solid rgba(255,255,255,0.2)"})
+                        ])
+                    ], md=2),
+                    
+                    # Métrica 2: Total de Pacientes
+                    dbc.Col([
+                        html.Div([
+                            html.Div([
+                                html.I(className="bi bi-people-fill", 
+                                      style={"fontSize": "28px", "color": "white", "marginBottom": "8px"}),
+                                html.P("Total de Pacientes", className="text-white-50 mb-1", 
+                                      style={"fontSize": "13px"}),
+                                html.H2(f"{len(df):,}", 
+                                       className="text-white mb-0 fw-bold"),
+                            ], className="text-center p-3", 
+                               style={"backgroundColor": "rgba(255,255,255,0.15)", 
+                                      "borderRadius": "12px", "border": "2px solid rgba(255,255,255,0.2)"})
+                        ])
+                    ], md=2),
+                    
+                    # Métrica 3: Idade Média
+                    dbc.Col([
+                        html.Div([
+                            html.Div([
+                                html.I(className="bi bi-calendar-heart", 
+                                      style={"fontSize": "28px", "color": "white", "marginBottom": "8px"}),
+                                html.P("Idade Média", className="text-white-50 mb-1", 
+                                      style={"fontSize": "13px"}),
+                                html.H2(f"{idade_media:.0f}", 
+                                       className="text-white mb-0 fw-bold"),
+                            ], className="text-center p-3", 
+                               style={"backgroundColor": "rgba(255,255,255,0.15)", 
+                                      "borderRadius": "12px", "border": "2px solid rgba(255,255,255,0.2)"})
+                        ])
+                    ], md=2),
+                    
+                    # Métrica 4: Maior Risco
+                    dbc.Col([
+                        html.Div([
+                            html.Div([
+                                html.I(className="bi bi-exclamation-triangle-fill", 
+                                      style={"fontSize": "28px", "color": "#ff6b6b", "marginBottom": "8px"}),
+                                html.P(f"Maior Risco (Cluster {maior_risco_cluster})", className="text-white-50 mb-1", 
+                                      style={"fontSize": "13px"}),
+                                html.H2(f"{maior_risco_valor:.1f}%", 
+                                       className="text-white mb-0 fw-bold"),
+                            ], className="text-center p-3", 
+                               style={"backgroundColor": "rgba(255,107,107,0.2)", 
+                                      "borderRadius": "12px", "border": "2px solid rgba(255,107,107,0.4)"})
+                        ])
+                    ], md=2),
+                    
+                    # Métrica 5: Menor Risco
+                    dbc.Col([
+                        html.Div([
+                            html.Div([
+                                html.I(className="bi bi-shield-check", 
+                                      style={"fontSize": "28px", "color": "#51cf66", "marginBottom": "8px"}),
+                                html.P(f"Menor Risco (Cluster {menor_risco_cluster})", className="text-white-50 mb-1", 
+                                      style={"fontSize": "13px"}),
+                                html.H2(f"{menor_risco_valor:.1f}%", 
+                                       className="text-white mb-0 fw-bold"),
+                            ], className="text-center p-3", 
+                               style={"backgroundColor": "rgba(81,207,102,0.2)", 
+                                      "borderRadius": "12px", "border": "2px solid rgba(81,207,102,0.4)"})
+                        ])
+                    ], md=2),
+                    
+                    # Métrica 6: % com Doença
+                    dbc.Col([
+                        html.Div([
+                            html.Div([
+                                html.I(className="bi bi-heart-pulse-fill", 
+                                      style={"fontSize": "28px", "color": "white", "marginBottom": "8px"}),
+                                html.P("Com Doença Cardio.", className="text-white-50 mb-1", 
+                                      style={"fontSize": "13px"}),
+                                html.H2(f"{percentual_risco:.1f}%", 
+                                       className="text-white mb-0 fw-bold"),
+                            ], className="text-center p-3", 
+                               style={"backgroundColor": "rgba(255,255,255,0.15)", 
+                                      "borderRadius": "12px", "border": "2px solid rgba(255,255,255,0.2)"})
+                        ])
+                    ], md=2),
+                ], className="mt-4")
+            ], className="container py-5")
+        ], style={
+            "background": f"linear-gradient(135deg, {PALETTE['gradient_start']} 0%, {PALETTE['gradient_end']} 100%)",
+            "marginBottom": "40px",
+            "borderRadius": "0 0 30px 30px",
+            "boxShadow": "0 10px 40px rgba(0,0,0,0.2)"
+        })
     ])
     
     # ================== Seção de Profiling (Tabelas) ==================
@@ -429,17 +555,15 @@ def layout():
 
     # ================== Layout Final ==================
     return html.Div([
-        page_header,
-        dbc.Alert("Análise de K=6 carregada com sucesso.", color="success"),
         metrics_section,
         html.Hr(),
         evaluation_card,
         html.Hr(),
         profiling_tables,
         html.Hr(),
-        interpretation_card,
-        html.Hr(),
         dynamic_graphs,
+        html.Hr(),
+        interpretation_card,
         html.Hr(),
         
     ], className="mb-5")
