@@ -12,14 +12,10 @@ pd.set_option('display.float_format', lambda x: '%.2f' % x)
 
 K_ESCOLHIDO = 6
 
-# --- NOVOS CAMINHOS ---
-# Arquivo usado para TREINAR o K-Means (o mesmo dos scripts de análise)
+# --- CAMINHOS ---
 cluster_data_path = './clusterization/data_clusters.parquet'
-# Arquivo onde vamos COLAR os rótulos (seu arquivo principal)
 label_data_path = './clusterization/cardio_data_processed.parquet'
-# Arquivo de saída final
 output_path = './clusterization/cardio_data_processed_with_clusters.parquet'
-
 
 print(f"--- INICIANDO ANÁLISE FINAL COM K={K_ESCOLHIDO} ---")
 
@@ -31,7 +27,7 @@ except FileNotFoundError:
     print(f"ERRO: Arquivo de cluster '{cluster_data_path}' não encontrado.")
     exit()
 
-# Definir o Pré-processador (Opção 2 - BMI)
+# Definir o Pré-processador
 continuous_features = ['age_years', 'ap_hi', 'ap_lo', 'bmi']
 categorical_features = ['gender', 'cholesterol', 'gluc']
 binary_features = ['smoke', 'alco', 'active']
@@ -74,15 +70,15 @@ if len(df_clusters) != len(df_final):
 else:
     print("Tamanhos validados. Anexando rótulos ao DataFrame principal.")
 
-# Anexar a nova coluna 'cluster'
-df_final['cluster'] = labels
+# Anexar a nova coluna 'clusterk6'
+df_final['clusterk6'] = labels
 
 # --- 4. Salvar DataFrame Final ---
 df_final.to_parquet(output_path, index=False)
-print(f"\nDataFrame final com clusters salvo em: '{output_path}'")
+print(f"\nDataFrame final com clusters K=6 salvo em: '{output_path}'")
 
 print(f"\nDistribuição dos clusters (K={K_ESCOLHIDO}):")
-print(df_final['cluster'].value_counts().sort_index())
+print(df_final['clusterk6'].value_counts().sort_index())
 
 # --- 5. Profiling (Interpretação) dos Clusters ---
 print("\n--- PASSO 3: PROFILING (QUEM SÃO OS CLUSTERS?) ---")
@@ -90,29 +86,29 @@ print("(Usando dados de 'cardio_data_processed.parquet')")
 
 # Perfil Numérico (Médias)
 numeric_cols = ['age_years', 'bmi', 'ap_hi', 'ap_lo', 'height', 'weight']
-profile_numeric = df_final.groupby('cluster')[numeric_cols].mean()
+profile_numeric = df_final.groupby('clusterk6')[numeric_cols].mean()
 print("\n### Perfil Numérico (Médias por Cluster) ###")
 print(profile_numeric)
 
 # Perfil Categórico (Percentuais)
 print("\n### Perfil Categórico: Colesterol (% por Cluster) ###")
-profile_chol = df_final.groupby('cluster')['cholesterol'].value_counts(normalize=True).mul(100).unstack(fill_value=0)
+profile_chol = df_final.groupby('clusterk6')['cholesterol'].value_counts(normalize=True).mul(100).unstack(fill_value=0)
 print(profile_chol)
 
 print("\n### Perfil Categórico: Glicose (% por Cluster) ###")
-profile_gluc = df_final.groupby('cluster')['gluc'].value_counts(normalize=True).mul(100).unstack(fill_value=0)
+profile_gluc = df_final.groupby('clusterk6')['gluc'].value_counts(normalize=True).mul(100).unstack(fill_value=0)
 print(profile_gluc)
 
 print("\n### Perfil Categórico: Estilo de Vida (% que SIM) ###")
 lifestyle_cols = ['smoke', 'alco', 'active']
-profile_lifestyle = df_final.groupby('cluster')[lifestyle_cols].mean().mul(100)
+profile_lifestyle = df_final.groupby('clusterk6')[lifestyle_cols].mean().mul(100)
 print(profile_lifestyle)
 
 # --- 6. Validação com a variável 'cardio' ---
 print("\n--- PASSO 4: VALIDAÇÃO (TAXA DE DOENÇA CARDÍACA) ---")
 
-validation = df_final.groupby('cluster')['cardio'].mean().mul(100).sort_values(ascending=False)
+validation = df_final.groupby('clusterk6')['cardio'].mean().mul(100).sort_values(ascending=False)
 print("\n### Taxa de Doença Cardíaca (%) por Cluster ###")
 print(validation)
 
-print("\n--- ANÁLISE CONCLUÍDA ---")
+print("\n--- ANÁLISE K=6 CONCLUÍDA ---")

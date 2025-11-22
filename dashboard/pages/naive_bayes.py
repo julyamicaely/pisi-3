@@ -49,24 +49,37 @@ def read_report_metrics():
     """Lê métricas do arquivo de relatório."""
     metrics = {"Accuracy": "N/A", "Precision": "N/A", "Recall": "N/A", "F1-Score": "N/A", "report": "Relatório não encontrado."}
     try:
-        with open(REPORTS_PATH / "naive_bayes_report.txt", "r") as f:
-            content = f.read()
-            metrics["report"] = content
+        # Tente diferentes codificações comuns
+        encodings = ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
+        
+        for encoding in encodings:
+            try:
+                with open(REPORTS_PATH / "naive_bayes_report.txt", "r", encoding=encoding) as f:
+                    content = f.read()
+                break  # Se leu com sucesso, sai do loop
+            except UnicodeDecodeError:
+                continue
+        else:
+            # Se nenhuma codificação funcionou
+            print("Não foi possível decodificar o arquivo com nenhuma codificação comum.")
+            return metrics
             
-            # Use regex to find the values
-            accuracy_match = re.search(r"Acurácia: ([\d.]+)", content)
-            precision_match = re.search(r"Precisão: ([\d.]+)", content)
-            recall_match = re.search(r"Recall: ([\d.]+)", content)
-            f1_match = re.search(r"F1-Score: ([\d.]+)", content)
+        metrics["report"] = content
+        
+        # Use regex to find the values
+        accuracy_match = re.search(r"Acurácia: ([\d.]+)", content)
+        precision_match = re.search(r"Precisão: ([\d.]+)", content)
+        recall_match = re.search(r"Recall: ([\d.]+)", content)
+        f1_match = re.search(r"F1-Score: ([\d.]+)", content)
 
-            if accuracy_match:
-                metrics["Accuracy"] = f"{float(accuracy_match.group(1)) * 100:.2f}%"
-            if precision_match:
-                metrics["Precision"] = f"{float(precision_match.group(1)) * 100:.2f}%"
-            if recall_match:
-                metrics["Recall"] = f"{float(recall_match.group(1)) * 100:.2f}%"
-            if f1_match:
-                metrics["F1-Score"] = f"{float(f1_match.group(1)) * 100:.2f}%"
+        if accuracy_match:
+            metrics["Accuracy"] = f"{float(accuracy_match.group(1)) * 100:.2f}%"
+        if precision_match:
+            metrics["Precision"] = f"{float(precision_match.group(1)) * 100:.2f}%"
+        if recall_match:
+            metrics["Recall"] = f"{float(recall_match.group(1)) * 100:.2f}%"
+        if f1_match:
+            metrics["F1-Score"] = f"{float(f1_match.group(1)) * 100:.2f}%"
 
     except FileNotFoundError:
         print("Arquivo de relatório não encontrado.")
