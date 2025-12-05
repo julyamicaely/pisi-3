@@ -38,6 +38,7 @@ def train_xgboost(use_smote=True, random_state=42):
     print("=== Treinando modelo XGBoost ===")
     
     # USAR PIPELINE COMPARTILHADO (elimina duplicação!)
+    used_pipeline = False
     if USE_SHARED_PREPROCESSING:
         try:
             # Carregar dados pré-processados com escalonamento e engenharia de features
@@ -57,13 +58,15 @@ def train_xgboost(use_smote=True, random_state=42):
             print(f"   - Escalonamento: ✅ Aplicado")
             print(f"   - Engenharia de features: ✅ Aplicada")
             
+            used_pipeline = True
+            
         except Exception as e:
             print(f"❌ Erro ao usar pipeline compartilhado: {e}")
             print("Voltando para modo legacy...")
-            USE_SHARED_PREPROCESSING = False
+            used_pipeline = False
     
     # FALLBACK: Modo legacy (caso pipeline não esteja disponível)
-    if not USE_SHARED_PREPROCESSING:
+    if not used_pipeline:
         df = pd.read_parquet(DATA_PATH)
         df = df.drop(columns=["id", "bp_category", "bp_category_encoded"], errors="ignore")
         
