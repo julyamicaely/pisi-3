@@ -32,14 +32,15 @@ def layout():
     page_header = html.Div([
         html.Div([
             html.H1([
-                html.I(className="bi bi-heart-pulse-fill me-3", style={"fontSize": "42px"}),
+                html.I(className="bi bi-heart-pulse-fill me-3", style={"fontSize": "42px", "color": "white"}),
                 "Dashboard de Machine Learning"
-            ], className="gradient-text mb-3", style={
+            ], className="mb-3", style={
                 "fontSize": "42px", 
                 "fontWeight": "700",
                 "display": "flex",
                 "alignItems": "center",
-                "justifyContent": "center"
+                "justifyContent": "center",
+                "color": "white"
             }),
             html.P(
                 "Pipeline de classificação e análise de risco cardiovascular",
@@ -74,7 +75,15 @@ def layout():
                                 "backgroundClip": "text"
                             }),
                         ], style={"marginBottom": "16px"}),
-                        html.H4("Random Forest", className="mb-2", style={"fontWeight": "700"}),
+                        html.Div([
+                            html.H4("Random Forest", className="mb-2", style={"fontWeight": "700"}, id="rf-title"),
+                            dbc.Tooltip(
+                                "Ensemble de múltiplas árvores de decisão que vota para classificação final. "
+                                "Robusto contra overfitting e funciona bem com dados desbalanceados.",
+                                target="rf-title",
+                                placement="top",
+                            ),
+                        ]),
                         html.P("Modelo de classificação com ensemble de árvores de decisão", 
                                className="text-muted mb-3", 
                                style={"fontSize": "14px", "lineHeight": "1.5"}),
@@ -113,7 +122,15 @@ def layout():
                                 "backgroundClip": "text"
                             }),
                         ], style={"marginBottom": "16px"}),
-                        html.H4("XGBoost", className="mb-2", style={"fontWeight": "700"}),
+                        html.Div([
+                            html.H4("XGBoost", className="mb-2", style={"fontWeight": "700"}, id="xgb-title"),
+                            dbc.Tooltip(
+                                "Extreme Gradient Boosting: algoritmo de boosting sequencial que otimiza "
+                                "erros residuais. Alta precisão e eficiência computacional.",
+                                target="xgb-title",
+                                placement="top",
+                            ),
+                        ]),
                         html.P("Gradient Boosting otimizado para alta performance", 
                                className="text-muted mb-3",
                                style={"fontSize": "14px", "lineHeight": "1.5"}),
@@ -152,7 +169,15 @@ def layout():
                                 "backgroundClip": "text"
                             }),
                         ], style={"marginBottom": "16px"}),
-                        html.H4("Naive Bayes", className="mb-2", style={"fontWeight": "700"}),
+                        html.Div([
+                            html.H4("Naive Bayes", className="mb-2", style={"fontWeight": "700"}, id="nb-title"),
+                            dbc.Tooltip(
+                                "Classificador probabilístico baseado no Teorema de Bayes. "
+                                "Rápido, eficiente e funciona bem com dados de alta dimensionalidade.",
+                                target="nb-title",
+                                placement="top",
+                            ),
+                        ]),
                         html.P("Classificador probabilístico baseado no Teorema de Bayes", 
                                className="text-muted mb-3",
                                style={"fontSize": "14px", "lineHeight": "1.5"}),
@@ -191,7 +216,15 @@ def layout():
                                 "backgroundClip": "text"
                             }),
                         ], style={"marginBottom": "16px"}),
-                        html.H4("Clusterização", className="mb-2", style={"fontWeight": "700"}),
+                        html.Div([
+                            html.H4("Clusterização", className="mb-2", style={"fontWeight": "700"}, id="cluster-title"),
+                            dbc.Tooltip(
+                                "K-Means: algoritmo de aprendizado não supervisionado que agrupa pacientes "
+                                "por similaridade. Descobre padrões ocultos nos dados.",
+                                target="cluster-title",
+                                placement="top",
+                            ),
+                        ]),
                         html.P("Segmentação de pacientes com K-Means não supervisionado", 
                                className="text-muted mb-3",
                                style={"fontSize": "14px", "lineHeight": "1.5"}),
@@ -309,9 +342,61 @@ def layout():
         ], width=6, md=3),
     ])
     
-    # Footer
+    # Footer com atalhos de teclado
     footer = html.Div([
         html.Hr(style={"margin": f"{SPACING['xl']} 0"}),
+        
+        # Atalhos de teclado
+        dbc.Row([
+            dbc.Col([
+                html.Div([
+                    html.H6("⌨️ Atalhos de Teclado", className="mb-3", style={"fontWeight": "600"}),
+                    html.Div([
+                        dbc.Badge("Home", color="light", text_color="dark", className="me-2"),
+                        html.Span("Voltar ao topo", className="text-muted small"),
+                    ], className="mb-2"),
+                    html.Div([
+                        dbc.Badge("End", color="light", text_color="dark", className="me-2"),
+                        html.Span("Ir ao final", className="text-muted small"),
+                    ], className="mb-2"),
+                    html.Div([
+                        dbc.Badge("Ctrl + K", color="light", text_color="dark", className="me-2"),
+                        html.Span("Buscar (em breve)", className="text-muted small"),
+                    ], className="mb-2"),
+                ], style={
+                    "background": "rgba(102, 126, 234, 0.05)",
+                    "padding": "20px",
+                    "borderRadius": "12px",
+                    "border": "1px solid rgba(102, 126, 234, 0.2)"
+                })
+            ], md=6, lg=4, className="mb-4"),
+            
+            dbc.Col([
+                html.Div([
+                    html.H6("🎯 Navegação Rápida", className="mb-3", style={"fontWeight": "600"}),
+                    html.Div([
+                        html.A([
+                            html.I(className="bi bi-tree me-2"),
+                            "Random Forest"
+                        ], href="/random-forest", className="d-block text-decoration-none mb-2"),
+                        html.A([
+                            html.I(className="bi bi-lightning-charge me-2"),
+                            "XGBoost"
+                        ], href="/xgboost", className="d-block text-decoration-none mb-2"),
+                        html.A([
+                            html.I(className="bi bi-clipboard-data me-2"),
+                            "Naive Bayes"
+                        ], href="/naive-bayes", className="d-block text-decoration-none mb-2"),
+                    ])
+                ], style={
+                    "background": "rgba(67, 160, 71, 0.05)",
+                    "padding": "20px",
+                    "borderRadius": "12px",
+                    "border": "1px solid rgba(67, 160, 71, 0.2)"
+                })
+            ], md=6, lg=4, className="mb-4"),
+        ]),
+        
         html.P([
             "Dashboard desenvolvido com ",
             html.I(className="bi bi-heart-fill", style={"color": PALETTE["warn"]}),
@@ -319,7 +404,7 @@ def layout():
             html.A("Documentação", href="#", className="text-decoration-none"),
             " | ",
             html.A("GitHub", href="#", className="text-decoration-none"),
-        ], className="text-center text-muted small"),
+        ], className="text-center text-muted small mt-4"),
     ])
     
     # Layout completo
