@@ -25,6 +25,30 @@ PALETTE = {
     "chart_4": "#A8E6CF",      # Verde menta
 }
 
+# ================== GRADIENTES MODERNOS ==================
+GRADIENTS = {
+    "primary": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    "success": "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
+    "danger": "linear-gradient(135deg, #eb3349 0%, #f45c43 100%)",
+    "info": "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+    "warning": "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+    "dark": "linear-gradient(135deg, #2c3e50 0%, #34495e 100%)",
+    "ocean": "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)",
+    "sunset": "linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)",
+}
+
+# ================== SOMBRAS MODERNIZADAS ==================
+SHADOWS = {
+    "xs": "0 1px 2px rgba(0,0,0,0.05)",
+    "sm": "0 2px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03)",
+    "md": "0 4px 8px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04)",
+    "lg": "0 8px 16px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.06)",
+    "xl": "0 12px 24px rgba(0,0,0,0.12), 0 6px 12px rgba(0,0,0,0.08)",
+    "2xl": "0 20px 40px rgba(0,0,0,0.15), 0 10px 20px rgba(0,0,0,0.1)",
+    "inner": "inset 0 2px 4px rgba(0,0,0,0.06)",
+    "glow": "0 0 20px rgba(102, 126, 234, 0.5)",
+}
+
 # ================== TIPOGRAFIA ==================
 FONTS = {
     "base": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif",

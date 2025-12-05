@@ -14,6 +14,44 @@ body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background: linear-gradient(180deg, #f5f7fa 0%, #e8ecf1 100%);
+}
+
+/* ========== GLASSMORPHISM ========== */
+.glass-card {
+    background: rgba(255, 255, 255, 0.7) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.glass-card:hover {
+    background: rgba(255, 255, 255, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+/* ========== GRADIENTES ========== */
+.gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-success {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.gradient-danger {
+    background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+}
+
+.gradient-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.gradient-text {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 /* Links da sidebar */
@@ -31,14 +69,33 @@ body {
     font-weight: 600;
 }
 
-/* Cards com hover */
+/* Cards com hover aprimorado */
 .card {
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s;
+}
+
+.card:hover::before {
+    left: 100%;
 }
 
 .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15), 0 6px 12px rgba(0, 0, 0, 0.1) !important;
+    border-color: rgba(102, 126, 234, 0.3);
 }
 
 /* Botões */
@@ -160,11 +217,56 @@ pre {
     animation: fadeIn 0.3s ease-in-out;
 }
 
-/* Badges */
+/* Badges com gradiente */
 .badge {
     font-weight: 600;
-    padding: 6px 12px;
-    border-radius: 12px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.badge-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.badge-success {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+    box-shadow: 0 4px 12px rgba(56, 239, 125, 0.4);
+}
+
+.badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Ícones animados */
+.bi {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card:hover .bi {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.btn:hover .bi {
+    transform: translateX(4px);
+}
+
+/* Pulsar suave em ícones importantes */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+.icon-pulse {
+    animation: pulse 2s ease-in-out infinite;
 }
 
 /* Tooltips */
@@ -204,6 +306,15 @@ pre {
     display: none;
 }
 
+#sidebar.collapsed #theme-toggle {
+    justify-content: center !important;
+    padding: 8px !important;
+}
+
+#sidebar.collapsed #theme-label {
+    display: none !important;
+}
+
 #sidebar.collapsed {
     width: 70px !important;
 }
@@ -229,5 +340,64 @@ html {
 
 /* Loading spinner customizado */
 ._dash-loading {
-    background-color: rgba(30, 136, 229, 0.1) !important;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%) !important;
+}
+
+/* Separadores decorativos */
+.section-divider {
+    height: 4px;
+    background: linear-gradient(90deg, transparent, #667eea, transparent);
+    margin: 32px 0;
+    border-radius: 2px;
+}
+
+/* Efeito shimmer para loading */
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+.skeleton-loader {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+}
+
+/* Brilho em hover para botões */
+.btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn:hover::after {
+    width: 300px;
+    height: 300px;
+}
+
+/* Sombra de texto para melhor legibilidade */
+.text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Efeito de desfoque no fundo quando modal está aberto */
+.blur-background {
+    filter: blur(4px);
+    transition: filter 0.3s ease;
 }

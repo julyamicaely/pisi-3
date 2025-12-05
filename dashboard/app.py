@@ -211,7 +211,6 @@ def update_breadcrumb(pathname):
     ], style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "width": "100%"})
 
 
-
 # ================== EXECUÇÃO ==================
 if __name__ == "__main__":
     app.run(debug=True, host="127.0.0.1", port=8050)

@@ -28,41 +28,75 @@ dash.register_page(
 def layout():
     """Cria layout da página inicial."""
     
-    # Header
+    # Header com gradiente
     page_header = html.Div([
-        html.H1("🏥 Dashboard de Machine Learning", style={"fontSize": "36px", "fontWeight": "700", "color": PALETTE["dark"]}),
-        html.P(
-            "Pipeline de classificação e análise de risco cardiovascular",
-            style={"fontSize": "18px", "color": PALETTE["muted"], "marginBottom": "0"}
-        ),
+        html.Div([
+            html.H1([
+                html.I(className="bi bi-heart-pulse-fill me-3", style={"fontSize": "42px"}),
+                "Dashboard de Machine Learning"
+            ], className="gradient-text mb-3", style={
+                "fontSize": "42px", 
+                "fontWeight": "700",
+                "display": "flex",
+                "alignItems": "center",
+                "justifyContent": "center"
+            }),
+            html.P(
+                "Pipeline de classificação e análise de risco cardiovascular",
+                className="text-white",
+                style={"fontSize": "18px", "marginBottom": "0", "opacity": "0.95"}
+            ),
+        ], style={"position": "relative", "zIndex": "1"})
     ], style={
         "textAlign": "center",
         "padding": f"{SPACING['xxl']} {SPACING['lg']}",
-        "backgroundColor": "white",
-        "borderRadius": "12px",
+        "background": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        "borderRadius": "16px",
         "marginBottom": SPACING["xl"],
-        "boxShadow": "0 4px 12px rgba(0,0,0,0.08)",
+        "boxShadow": "0 12px 24px rgba(102, 126, 234, 0.3), 0 6px 12px rgba(118, 75, 162, 0.2)",
+        "position": "relative",
+        "overflow": "hidden",
     })
     
-    # Cards de navegação rápida
+    # Cards de navegação rápida com glassmorphism
     nav_cards = dbc.Row([
         # Random Forest
         dbc.Col([
             dbc.Card([
                 dbc.CardBody([
                     html.Div([
-                        html.I(className="bi bi-tree-fill", style={"fontSize": "48px", "color": PALETTE["primary"]}),
-                        html.H4("Random Forest", className="mt-3 mb-2"),
-                        html.P("Modelo de classificação com ensemble de árvores de decisão", className="text-muted mb-3"),
+                        html.Div([
+                            html.I(className="bi bi-tree-fill icon-pulse", style={
+                                "fontSize": "56px", 
+                                "background": "linear-gradient(135deg, #667eea, #764ba2)",
+                                "WebkitBackgroundClip": "text",
+                                "WebkitTextFillColor": "transparent",
+                                "backgroundClip": "text"
+                            }),
+                        ], style={"marginBottom": "16px"}),
+                        html.H4("Random Forest", className="mb-2", style={"fontWeight": "700"}),
+                        html.P("Modelo de classificação com ensemble de árvores de decisão", 
+                               className="text-muted mb-3", 
+                               style={"fontSize": "14px", "lineHeight": "1.5"}),
                         dbc.Button(
                             [html.I(className="bi bi-arrow-right me-2"), "Ver Análise"],
                             href="/random-forest",
-                            color="primary",
+                            style={
+                                "background": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                "border": "none",
+                                "fontWeight": "600",
+                                "padding": "10px 24px",
+                                "borderRadius": "8px"
+                            },
                             className="w-100"
                         ),
                     ], style={"textAlign": "center"})
                 ])
-            ], style={"height": "100%", "boxShadow": "0 2px 8px rgba(0,0,0,0.08)", "transition": "transform 0.2s"})
+            ], className="glass-card", style={
+                "height": "100%", 
+                "borderRadius": "16px",
+                "border": "1px solid rgba(255,255,255,0.3)"
+            })
         ], width=12, md=6, lg=4, className="mb-4"),
         
         # XGBoost
@@ -70,18 +104,38 @@ def layout():
             dbc.Card([
                 dbc.CardBody([
                     html.Div([
-                        html.I(className="bi bi-lightning-charge-fill", style={"fontSize": "48px", "color": PALETTE["accent"]}),
-                        html.H4("XGBoost", className="mt-3 mb-2"),
-                        html.P("Gradient Boosting otimizado para alta performance", className="text-muted mb-3"),
+                        html.Div([
+                            html.I(className="bi bi-lightning-charge-fill icon-pulse", style={
+                                "fontSize": "56px",
+                                "background": "linear-gradient(135deg, #4facfe, #00f2fe)",
+                                "WebkitBackgroundClip": "text",
+                                "WebkitTextFillColor": "transparent",
+                                "backgroundClip": "text"
+                            }),
+                        ], style={"marginBottom": "16px"}),
+                        html.H4("XGBoost", className="mb-2", style={"fontWeight": "700"}),
+                        html.P("Gradient Boosting otimizado para alta performance", 
+                               className="text-muted mb-3",
+                               style={"fontSize": "14px", "lineHeight": "1.5"}),
                         dbc.Button(
                             [html.I(className="bi bi-arrow-right me-2"), "Ver Análise"],
                             href="/xgboost",
-                            color="info",
+                            style={
+                                "background": "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+                                "border": "none",
+                                "fontWeight": "600",
+                                "padding": "10px 24px",
+                                "borderRadius": "8px"
+                            },
                             className="w-100"
                         ),
                     ], style={"textAlign": "center"})
                 ])
-            ], style={"height": "100%", "boxShadow": "0 2px 8px rgba(0,0,0,0.08)"})
+            ], className="glass-card", style={
+                "height": "100%",
+                "borderRadius": "16px",
+                "border": "1px solid rgba(255,255,255,0.3)"
+            })
         ], width=12, md=6, lg=4, className="mb-4"),
         
         # Naive Bayes
@@ -89,18 +143,38 @@ def layout():
             dbc.Card([
                 dbc.CardBody([
                     html.Div([
-                        html.I(className="bi bi-clipboard-data-fill", style={"fontSize": "48px", "color": PALETTE["info"]}),
-                        html.H4("Naive Bayes", className="mt-3 mb-2"),
-                        html.P("Classificador probabilístico baseado no Teorema de Bayes", className="text-muted mb-3"),
+                        html.Div([
+                            html.I(className="bi bi-clipboard-data-fill icon-pulse", style={
+                                "fontSize": "56px",
+                                "background": "linear-gradient(135deg, #fa709a, #fee140)",
+                                "WebkitBackgroundClip": "text",
+                                "WebkitTextFillColor": "transparent",
+                                "backgroundClip": "text"
+                            }),
+                        ], style={"marginBottom": "16px"}),
+                        html.H4("Naive Bayes", className="mb-2", style={"fontWeight": "700"}),
+                        html.P("Classificador probabilístico baseado no Teorema de Bayes", 
+                               className="text-muted mb-3",
+                               style={"fontSize": "14px", "lineHeight": "1.5"}),
                         dbc.Button(
                             [html.I(className="bi bi-arrow-right me-2"), "Ver Análise"],
                             href="/naive-bayes",
-                            color="secondary",
+                            style={
+                                "background": "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+                                "border": "none",
+                                "fontWeight": "600",
+                                "padding": "10px 24px",
+                                "borderRadius": "8px"
+                            },
                             className="w-100"
                         ),
                     ], style={"textAlign": "center"})
                 ])
-            ], style={"height": "100%", "boxShadow": "0 2px 8px rgba(0,0,0,0.08)"})
+            ], className="glass-card", style={
+                "height": "100%",
+                "borderRadius": "16px",
+                "border": "1px solid rgba(255,255,255,0.3)"
+            })
         ], width=12, md=6, lg=4, className="mb-4"),
 
         # Clusterização
@@ -108,18 +182,38 @@ def layout():
             dbc.Card([
                 dbc.CardBody([
                     html.Div([
-                        html.I(className="bi bi-diagram-3-fill", style={"fontSize": "48px", "color": PALETTE["success"]}),
-                        html.H4("Clusterização", className="mt-3 mb-2"),
-                        html.P("Segmentação de pacientes com K-Means não supervisionado", className="text-muted mb-3"),
+                        html.Div([
+                            html.I(className="bi bi-diagram-3-fill icon-pulse", style={
+                                "fontSize": "56px",
+                                "background": "linear-gradient(135deg, #11998e, #38ef7d)",
+                                "WebkitBackgroundClip": "text",
+                                "WebkitTextFillColor": "transparent",
+                                "backgroundClip": "text"
+                            }),
+                        ], style={"marginBottom": "16px"}),
+                        html.H4("Clusterização", className="mb-2", style={"fontWeight": "700"}),
+                        html.P("Segmentação de pacientes com K-Means não supervisionado", 
+                               className="text-muted mb-3",
+                               style={"fontSize": "14px", "lineHeight": "1.5"}),
                         dbc.Button(
                             [html.I(className="bi bi-arrow-right me-2"), "Ver Análise"],
                             href="/clusterizacao",
-                            color="success",
+                            style={
+                                "background": "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
+                                "border": "none",
+                                "fontWeight": "600",
+                                "padding": "10px 24px",
+                                "borderRadius": "8px"
+                            },
                             className="w-100"
                         ),
                     ], style={"textAlign": "center"})
                 ])
-            ], style={"height": "100%", "boxShadow": "0 2px 8px rgba(0,0,0,0.08)"})
+            ], className="glass-card", style={
+                "height": "100%",
+                "borderRadius": "16px",
+                "border": "1px solid rgba(255,255,255,0.3)"
+            })
         ], width=12, md=6, lg=4, className="mb-4"),
     ])
     
