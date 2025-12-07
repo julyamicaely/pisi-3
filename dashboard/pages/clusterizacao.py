@@ -819,28 +819,13 @@ def create_cluster_comparison_visualization(df: pd.DataFrame, gender_filter: int
                 textfont=dict(size=10)
             ))
         
-        # Adicionar texto com totais acima de cada cluster
-        cluster_names = [f'Cluster {stats["cluster"]}' for stats in cluster_stats]
-        totals = [stats['total'] for stats in cluster_stats]
-        
-        # Calcular a posição Y máxima para posicionar os totais
-        max_y = max([max([stats['values'][col] if col in stats['values'] else 0 for col in EDA_NUMERIC_COLS]) for stats in cluster_stats])
-        
-        fig.add_trace(go.Scatter(
-            x=cluster_names,
-            y=[max_y * 1.1 for _ in cluster_names],
-            mode='text',
-            text=[f'Total: {total}' for total in totals],
-            textfont=dict(size=12, color='black', family='Arial Black'),
-            showlegend=False,
-            hoverinfo='skip'
-        ))
+        # Totais removidos da visualização conforme solicitado
         
         fig.update_layout(
             title=f"⚖️ Comparação Inter-Cluster - {metric.upper()} (K={k_value})",
             xaxis_title="Clusters",
             yaxis_title="Valor da Métrica",
-            height=650,  # Aumentado para acomodar os totais
+            height=600,
             barmode='group',
             font=dict(size=11),
             showlegend=True,
@@ -1191,7 +1176,7 @@ class ClusterAnalyzer:
     @staticmethod
     def create_radar_chart(cluster_info: Optional[Dict], k_value: int, cluster_id: int, 
                           df: pd.DataFrame, cluster_col: str) -> go.Figure:
-        """Cria gráfico radar comparando cluster vs população geral"""
+        """Gria gráfico radar comparando cluster vs população geral"""
         
         if cluster_info is None:
             return go.Figure().add_annotation(
@@ -1485,7 +1470,12 @@ def layout():
                                             value=0,
                                             clearable=False,
                                             className="mb-3",
-                                            style={'borderRadius': '8px', 'fontSize': '16px'},
+                                            style={
+                                                'borderRadius': '8px', 
+                                                'fontSize': '16px',
+                                                'zIndex': 9999,
+                                                'position': 'relative'
+                                            },
                                             placeholder="Selecione um cluster..."
                                         ),
                                         html.Div([
@@ -1496,7 +1486,12 @@ def layout():
                                     ], md=6)
                                 ])
                             ])
-                        ], className="mb-4 shadow-sm"),
+                        ], className="mb-4 shadow-sm", style={
+                            "height": "200px", 
+                            "overflow": "visible",
+                            "position": "relative",
+                            "zIndex": 9999
+                        }),
                         
                         # 📋 RESUMO DO CLUSTER
                         html.Div(id="eda-cluster-metrics", className="mb-4"),
