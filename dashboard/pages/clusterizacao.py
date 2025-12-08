@@ -449,7 +449,7 @@ PERSONA_INTERPRETATIONS = {
         "Cluster 3 (Risco Baixo)": "Grupo Saudável (19.2% Risco): Menores valores de BMI e Pressão arterial enquando possuem os maiores indicadores de atividade física.",
     },
     16: {
-        "Cluster 6 (Risco Muito Alto - 86.0%)": "Hipertensão Crítica: Pressão arterial extremamente elevada (164/101) com IMC moderado (30.0). Grupo com maior risco cardiovascular, necessitando intervenção médica urgente.",
+        "Cluster 6 (Risco Muito Alto - 86.0%)": "Hipertensão Crítica: Pressão arterial extremamente elevada (164/101) com IMC moderado (30.0). Grupo com maior risco cardiovascular, necessitando atenção médica urgente.",
         "Cluster 1 (Risco Muito Alto - 81.1%)": "Obesidade Hipertensa: IMC muito alto (34.9) combinado com hipertensão (144/90). Perfil de alto risco metabólico.",
         "Cluster 5 (Risco Alto - 80.6%)": "Hipertensão Jovem com Maus Hábitos: Pacientes relativamente jovens (45 anos) com hipertensão (142/91) e maiores taxas de tabagismo (13.3%) e álcool (8.1%).",
         "Cluster 12 (Risco Alto - 79.9%)": "Hipertensão com Baixos Fatores Comportamentais: Pressão alta (142/89) mas com muito baixos índices de fumo (1.6%) e álcool (2.1%). Risco provavelmente relacionado a fatores não-comportamentais.",
@@ -983,12 +983,9 @@ class ClusterAnalyzer:
                     xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False
                 )
             
-            # Separar por género
+            # Separar por género com validação robusta
             male_data = cluster_data[cluster_data['gender'] == 1][variable].dropna()
             female_data = cluster_data[cluster_data['gender'] == 2][variable].dropna()
-            
-            # Criar figura com histogramas sobrepostos
-            fig = go.Figure()
             
             # Verificar se há dados para mostrar
             if len(male_data) == 0 and len(female_data) == 0:
@@ -997,29 +994,48 @@ class ClusterAnalyzer:
                     xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False
                 )
             
-            # Calcular histogramas para ambos os gêneros usando os mesmos bins para garantir consistência
-            if len(male_data) > 0 and len(female_data) > 0:
-                # Usar bins comuns para ambos os gêneros
-                male_counts, male_x = np.histogram(male_data, bins=30)
-                female_counts, female_x = np.histogram(female_data, bins=male_x)  # Usar os mesmos bins do masculino
+            # Criar figura com histogramas sobrepostos
+            fig = go.Figure()
+            
+            # Determinar bins baseado nos dados disponíveis para garantir consistência
+            all_data = pd.concat([male_data, female_data]).dropna()
+            if len(all_data) == 0:
+                return go.Figure().add_annotation(
+                    text="❌ Dados insuficientes para criar bins.", 
+                    xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False
+                )
+            
+            # Criar bins usando todos os dados combinados para garantir consistência
+            try:
+                # Usar 30 bins ou menos se houver poucos dados
+                n_bins = min(30, max(10, len(all_data) // 10))
+                _, bin_edges = np.histogram(all_data, bins=n_bins)
+                
+                # Calcular centros e labels dos bins
+                bin_centers = [(bin_edges[i] + bin_edges[i + 1]) / 2 for i in range(len(bin_edges) - 1)]
+                bin_labels = [f'{bin_edges[i]:.1f} - {bin_edges[i + 1]:.1f}' for i in range(len(bin_edges) - 1)]
+                
+                # Calcular histogramas para cada género usando os mesmos bins
+                male_counts = np.zeros(len(bin_centers))
+                female_counts = np.zeros(len(bin_centers))
+                
+                if len(male_data) > 0:
+                    male_hist, _ = np.histogram(male_data, bins=bin_edges)
+                    male_counts = male_hist
+                
+                if len(female_data) > 0:
+                    female_hist, _ = np.histogram(female_data, bins=bin_edges)
+                    female_counts = female_hist
+                
                 # Calcular totais por barra (soma masculino + feminino)
                 total_counts = male_counts + female_counts
-            elif len(male_data) > 0:
-                male_counts, male_x = np.histogram(male_data, bins=30)
-                female_counts, female_x = np.array([]), male_x
-                total_counts = male_counts
-            elif len(female_data) > 0:
-                male_counts, male_x = np.array([]), np.array([])
-                female_counts, female_x = np.histogram(female_data, bins=30)
-                total_counts = female_counts
-            else:
-                male_counts, male_x = np.array([]), np.array([])
-                female_counts, female_x = np.array([]), np.array([])
-                total_counts = np.array([])
-            
-            # Calcular centros e labels de intervalos para os bins
-            bin_centers = [(male_x[i] + male_x[i + 1]) / 2 for i in range(len(male_x) - 1)]
-            bin_labels = [f'{male_x[i]:.1f} - {male_x[i + 1]:.1f}' for i in range(len(male_x) - 1)]
+                
+            except Exception as e:
+                print(f"Erro ao calcular histogramas: {e}")
+                return go.Figure().add_annotation(
+                    text=f"❌ Erro ao processar dados: {str(e)}", 
+                    xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False
+                )
             
             # Adicionar barras para masculino com hover baseado em intervalos
             if len(male_data) > 0:
@@ -1052,8 +1068,9 @@ class ClusterAnalyzer:
                 ))
             
             # Adicionar linha trace com totais baseado em intervalos
-            if len(total_counts) > 0 and len(bin_centers) > 0:
-                # Filtrar apenas bins com valores > 0
+            # Lógica melhorada para diferentes cenários de dados
+            if len(male_data) > 0 and len(female_data) > 0:
+                # Ambos os gêneros têm dados - mostrar total combinado
                 filtered_centers = []
                 filtered_values = []
                 filtered_labels = []
@@ -1061,7 +1078,7 @@ class ClusterAnalyzer:
                 for i in range(len(total_counts)):
                     if total_counts[i] > 0:
                         filtered_centers.append(bin_centers[i])
-                        filtered_values.append(total_counts[i])
+                        filtered_values.append(int(total_counts[i]))
                         filtered_labels.append(bin_labels[i])
                 
                 if filtered_centers:
@@ -1069,15 +1086,75 @@ class ClusterAnalyzer:
                         x=filtered_centers,
                         y=filtered_values,
                         mode='lines+markers+text',
-                        name=f'📊 Total (M+F): {sum(total_counts)} registros',
+                        name=f'📊 Total (M+F): {int(sum(total_counts))} registros',
                         line=dict(color='#2ca02c', width=2, dash='dot'),
                         marker=dict(color='#2ca02c', size=8, symbol='circle'),
-                        text=[str(v) for v in filtered_values],
+                        text=[str(int(v)) for v in filtered_values],
                         textposition='top center',
                         textfont=dict(size=10, color='black', family='Arial'),
                         opacity=0.8,
                         customdata=filtered_labels,
                         hovertemplate='<b>📊 Total (M+F)</b><br>' +
+                                      f'{TRADUCOES.get(variable, variable)}: %{{customdata}}<br>' +
+                                      'Total de registros: %{y}<br>' +
+                                      '<extra></extra>'
+                    ))
+            elif len(male_data) > 0:
+                # Apenas dados masculinos disponíveis
+                filtered_centers = []
+                filtered_values = []
+                filtered_labels = []
+                
+                for i in range(len(male_counts)):
+                    if male_counts[i] > 0:
+                        filtered_centers.append(bin_centers[i])
+                        filtered_values.append(int(male_counts[i]))
+                        filtered_labels.append(bin_labels[i])
+                
+                if filtered_centers:
+                    fig.add_trace(go.Scatter(
+                        x=filtered_centers,
+                        y=filtered_values,
+                        mode='lines+markers+text',
+                        name=f'📊 Total Masculino: {len(male_data)} registros',
+                        line=dict(color='#2ca02c', width=2, dash='dot'),
+                        marker=dict(color='#2ca02c', size=8, symbol='circle'),
+                        text=[str(int(v)) for v in filtered_values],
+                        textposition='top center',
+                        textfont=dict(size=10, color='black', family='Arial'),
+                        opacity=0.8,
+                        customdata=filtered_labels,
+                        hovertemplate='<b>📊 Total Masculino</b><br>' +
+                                      f'{TRADUCOES.get(variable, variable)}: %{{customdata}}<br>' +
+                                      'Total de registros: %{y}<br>' +
+                                      '<extra></extra>'
+                    ))
+            elif len(female_data) > 0:
+                # Apenas dados femininos disponíveis
+                filtered_centers = []
+                filtered_values = []
+                filtered_labels = []
+                
+                for i in range(len(female_counts)):
+                    if female_counts[i] > 0:
+                        filtered_centers.append(bin_centers[i])
+                        filtered_values.append(int(female_counts[i]))
+                        filtered_labels.append(bin_labels[i])
+                
+                if filtered_centers:
+                    fig.add_trace(go.Scatter(
+                        x=filtered_centers,
+                        y=filtered_values,
+                        mode='lines+markers+text',
+                        name=f'📊 Total Feminino: {len(female_data)} registros',
+                        line=dict(color='#2ca02c', width=2, dash='dot'),
+                        marker=dict(color='#2ca02c', size=8, symbol='circle'),
+                        text=[str(int(v)) for v in filtered_values],
+                        textposition='top center',
+                        textfont=dict(size=10, color='black', family='Arial'),
+                        opacity=0.8,
+                        customdata=filtered_labels,
+                        hovertemplate='<b>📊 Total Feminino</b><br>' +
                                       f'{TRADUCOES.get(variable, variable)}: %{{customdata}}<br>' +
                                       'Total de registros: %{y}<br>' +
                                       '<extra></extra>'
@@ -1102,7 +1179,11 @@ class ClusterAnalyzer:
             )
             
             return fig
+            
         except Exception as e:
+            print(f"Erro detalhado na comparação por género: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return go.Figure().add_annotation(
                 text=f"❌ Erro na comparação por género: {str(e)}", 
                 xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False
