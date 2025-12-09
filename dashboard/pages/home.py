@@ -61,6 +61,53 @@ def layout():
     
     # Cards de navegação rápida com glassmorphism
     nav_cards = dbc.Row([
+        # Initial EDA
+        dbc.Col([
+            dbc.Card([
+                dbc.CardBody([
+                    html.Div([
+                        html.Div([
+                            html.I(className="bi bi-bar-chart-line-fill icon-pulse", style={
+                                "fontSize": "56px", 
+                                "background": "linear-gradient(135deg, #11998e, #38ef7d)",
+                                "WebkitBackgroundClip": "text",
+                                "WebkitTextFillColor": "transparent",
+                                "backgroundClip": "text"
+                            }),
+                        ], style={"marginBottom": "16px"}),
+                        html.Div([
+                            html.H4("EDA Inicial", className="mb-2", style={"fontWeight": "700"}, id="eda-title"),
+                            dbc.Tooltip(
+                                "Análise Exploratória de Dados Inicial. "
+                                "Visão geral, qualidade dos dados e correlações antes da modelagem.",
+                                target="eda-title",
+                                placement="top",
+                            ),
+                        ]),
+                        html.P("Exploração inicial e análise de qualidade dos dados", 
+                               className="text-muted mb-3", 
+                               style={"fontSize": "14px", "lineHeight": "1.5"}),
+                        dbc.Button(
+                            [html.I(className="bi bi-arrow-right me-2"), "Ver Análise"],
+                            href="/eda",
+                            style={
+                                "background": "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
+                                "border": "none",
+                                "fontWeight": "600",
+                                "padding": "10px 24px",
+                                "borderRadius": "8px"
+                            },
+                            className="w-100"
+                        ),
+                    ], style={"textAlign": "center"})
+                ])
+            ], className="glass-card", style={
+                "height": "100%", 
+                "borderRadius": "16px",
+                "border": "1px solid rgba(255,255,255,0.3)"
+            })
+        ], width=12, md=6, lg=4, className="mb-4"),
+
         # Random Forest
         dbc.Col([
             dbc.Card([
