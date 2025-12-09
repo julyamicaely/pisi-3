@@ -61,6 +61,53 @@ def layout():
     
     # Cards de navegação rápida com glassmorphism
     nav_cards = dbc.Row([
+        # Initial EDA
+        dbc.Col([
+            dbc.Card([
+                dbc.CardBody([
+                    html.Div([
+                        html.Div([
+                            html.I(className="bi bi-bar-chart-line-fill icon-pulse", style={
+                                "fontSize": "56px", 
+                                "background": "linear-gradient(135deg, #11998e, #38ef7d)",
+                                "WebkitBackgroundClip": "text",
+                                "WebkitTextFillColor": "transparent",
+                                "backgroundClip": "text"
+                            }),
+                        ], style={"marginBottom": "16px"}),
+                        html.Div([
+                            html.H4("EDA Inicial", className="mb-2", style={"fontWeight": "700"}, id="eda-title"),
+                            dbc.Tooltip(
+                                "Análise Exploratória de Dados Inicial. "
+                                "Visão geral, qualidade dos dados e correlações antes da modelagem.",
+                                target="eda-title",
+                                placement="top",
+                            ),
+                        ]),
+                        html.P("Exploração inicial e análise de qualidade dos dados", 
+                               className="text-muted mb-3", 
+                               style={"fontSize": "14px", "lineHeight": "1.5"}),
+                        dbc.Button(
+                            [html.I(className="bi bi-arrow-right me-2"), "Ver Análise"],
+                            href="/eda",
+                            style={
+                                "background": "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
+                                "border": "none",
+                                "fontWeight": "600",
+                                "padding": "10px 24px",
+                                "borderRadius": "8px"
+                            },
+                            className="w-100"
+                        ),
+                    ], style={"textAlign": "center"})
+                ])
+            ], className="glass-card", style={
+                "height": "100%", 
+                "borderRadius": "16px",
+                "border": "1px solid rgba(255,255,255,0.3)"
+            })
+        ], width=12, md=6, lg=4, className="mb-4"),
+
         # Random Forest
         dbc.Col([
             dbc.Card([
@@ -237,6 +284,54 @@ def layout():
                                 "fontWeight": "600",
                                 "padding": "10px 24px",
                                 "borderRadius": "8px"
+                            },
+                            className="w-100"
+                        ),
+                    ], style={"textAlign": "center"})
+                ])
+            ], className="glass-card", style={
+                "height": "100%",
+                "borderRadius": "16px",
+                "border": "1px solid rgba(255,255,255,0.3)"
+            })
+        ], width=12, md=6, lg=4, className="mb-4"),
+
+        # Comparação de Modelos
+        dbc.Col([
+            dbc.Card([
+                dbc.CardBody([
+                    html.Div([
+                        html.Div([
+                            html.I(className="bi bi-bar-chart-steps icon-pulse", style={
+                                "fontSize": "56px",
+                                "background": "linear-gradient(135deg, #FF6B6B, #FFE66D)",
+                                "WebkitBackgroundClip": "text",
+                                "WebkitTextFillColor": "transparent",
+                                "backgroundClip": "text"
+                            }),
+                        ], style={"marginBottom": "16px"}),
+                        html.Div([
+                            html.H4("Comparação", className="mb-2", style={"fontWeight": "700"}, id="comp-title"),
+                            dbc.Tooltip(
+                                "Comparativo direto de performance entre todos os modelos treinados. "
+                                "Analise métricas lado a lado para escolher o melhor algoritmo.",
+                                target="comp-title",
+                                placement="top",
+                            ),
+                        ]),
+                        html.P("Ranking e análise comparativa de todos os modelos", 
+                               className="text-muted mb-3",
+                               style={"fontSize": "14px", "lineHeight": "1.5"}),
+                        dbc.Button(
+                            [html.I(className="bi bi-arrow-right me-2"), "Ver Comparativo"],
+                            href="/model-comparison",
+                            style={
+                                "background": "linear-gradient(135deg, #FF6B6B 0%, #FFE66D 100%)",
+                                "border": "none",
+                                "fontWeight": "600",
+                                "padding": "10px 24px",
+                                "borderRadius": "8px",
+                                "color": "#333"
                             },
                             className="w-100"
                         ),
