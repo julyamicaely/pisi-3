@@ -24,7 +24,7 @@ dash.register_page(
     icon="bar-chart-steps"
 )
 
-# ====== Dados dos Modelos ======
+# ====== Dados dos Modelos (Treino/Validação) ======
 models_data = [
     {
         "Model": "Random Forest",
@@ -56,6 +56,35 @@ models_data = [
 ]
 
 df_models = pd.DataFrame(models_data)
+
+# ====== Dados dos Modelos (Teste - Novos) ======
+test_models_data = [
+    {
+        "Model": "Random Forest",
+        "Accuracy": 0.735,
+        "Precision": 0.699,
+        "Recall": 0.653,
+        "F1-Score": 0.675,
+        "AUC-ROC": 0.806
+    },
+    {
+        "Model": "Naive Bayes",
+        "Accuracy": 0.722,
+        "Precision": 0.726,
+        "Recall": 0.547,
+        "F1-Score": 0.624,
+        "AUC-ROC": 0.764
+    },
+    {
+        "Model": "XGBoost",
+        "Accuracy": 0.731,
+        "Precision": 0.738,
+        "Recall": 0.559,
+        "F1-Score": 0.636,
+        "AUC-ROC": 0.778
+    }
+]
+df_test_models = pd.DataFrame(test_models_data)
 
 # Transformar para formato longo para facilitar plotagem agrupada
 df_long = df_models.melt(id_vars=["Model", "Color"], 
@@ -113,7 +142,7 @@ layout = html.Div([
                 dbc.Card([
                     dbc.CardHeader("Radar de Performance", className="bg-white border-0 fw-bold"),
                     dbc.CardBody([
-                        dcc.Graph(id="radar-chart", config={"displayModeBar": False}, style={"height": "350px"})
+                        dcc.Graph(id="radar-chart", config={"displayModeBar": False}, style={"height": "400px"})
                     ])
                 ], style=CARD_STYLE, className="shadow-sm border-0 h-100")
             ], width=12, lg=6),
@@ -123,7 +152,7 @@ layout = html.Div([
                 dbc.Card([
                     dbc.CardHeader("Comparativo por Métrica", className="bg-white border-0 fw-bold"),
                     dbc.CardBody([
-                        dcc.Graph(id="bar-chart", config={"displayModeBar": False}, style={"height": "350px"})
+                        dcc.Graph(id="bar-chart", config={"displayModeBar": False}, style={"height": "400px"})
                     ])
                 ], style=CARD_STYLE, className="shadow-sm border-0 h-100")
             ], width=12, lg=6),
@@ -155,40 +184,23 @@ layout = html.Div([
         html.P("Valores normalizados (%). Eixo Y: Real, Eixo X: Predito.", className="text-center text-muted small mb-5"),
 
         html.H4("Dados Detalhados", className="mb-3 text-primary"),
+        
+        # Tabela de Teste (Nova)
         dbc.Card([
+            dbc.CardHeader("Performance no Teste (Dados Hold-out)", className="bg-white border-0 fw-bold text-success"),
             dbc.CardBody([
-                dbc.Table.from_dataframe(df_models, striped=True, bordered=True, hover=True, responsive=True, className="mb-0")
+                dbc.Table.from_dataframe(df_test_models, striped=True, bordered=True, hover=True, responsive=True, className="mb-0")
+            ])
+        ], style=CARD_STYLE, className="shadow-sm border-0 mb-4"),
+
+        # Tabela de Treino (Antiga)
+        dbc.Card([
+            dbc.CardHeader("Performance no Treino/Validação", className="bg-white border-0 fw-bold text-muted"),
+            dbc.CardBody([
+                dbc.Table.from_dataframe(df_models.drop(columns=["Color"]), striped=True, bordered=True, hover=True, responsive=True, className="mb-0")
             ])
         ], style=CARD_STYLE, className="shadow-sm border-0 mb-4")
     ]),
-
-    # Conclusão Final
-    dbc.Row([
-        dbc.Col([
-            dbc.Card([
-                dbc.CardHeader([html.I(className="bi bi-lightbulb-fill me-2 text-warning"), "Conclusão da Análise"], className="bg-white border-0 fw-bold"),
-                dbc.CardBody([
-                    html.P([
-                        html.Strong("XGBoost"), " e ", html.Strong("Random Forest"), 
-                        " demonstraram performance superior e muito similar. O XGBoost leva uma ligeira vantagem na ",
-                        html.Strong("Precisão (75%)"), ", o que significa que ele comete menos erros ao classificar um paciente como 'risco'. ",
-                        "Já o Random Forest tem um ", html.Strong("Recall"), " melhor, capturando mais casos positivos, mas com mais falsos alarmes."
-                    ]),
-                    html.P([
-                        "O ", html.Strong("Naive Bayes"), " ficou atrás em todas as métricas, confirmando que a suposição de independência das variáveis não se sustenta bem para este dataset complexo."
-                    ]),
-                    dbc.Alert(
-                        [
-                            html.H5("Recomendação: XGBoost", className="alert-heading"),
-                            html.P("Devido ao equilíbrio entre métricas e maior robustez (AUC-ROC ~0.79), o XGBoost é o modelo escolhido para o pipeline de produção."),
-                        ],
-                        color="success",
-                        className="mt-3 mb-0 shadow-sm border-0"
-                    )
-                ])
-            ], style=CARD_STYLE, className="shadow-sm border-0")
-        ], width=12)
-    ], className="mt-4")
 
 ], className="p-4")
 
@@ -218,10 +230,11 @@ def update_charts(_):
 
     fig_radar.update_layout(
         polar=dict(
-            radialaxis=dict(visible=True, range=[0.5, 0.85])
+            radialaxis=dict(visible=True, range=[0.5, 0.85], tickfont=dict(size=10), tickangle=0),
+            angularaxis=dict(tickfont=dict(size=12, family="Inter, sans-serif", color="#333"), rotation=90)
         ),
-        margin=dict(t=20, b=20, l=40, r=40),
-        legend=dict(orientation="h", y=-0.1),
+        margin=dict(t=40, b=40, l=60, r=60),
+        legend=dict(orientation="h", y=-0.15, font=dict(size=12)),
         template="plotly_white"
     )
 
@@ -230,12 +243,14 @@ def update_charts(_):
                      color_discrete_map={m["Model"]: m["Color"] for m in models_data},
                      text_auto=".2f")
     
+    fig_bar.update_traces(textangle=0, textposition="outside", cliponaxis=False)
+
     fig_bar.update_layout(
         plot_bgcolor="white",
         margin=dict(t=30, b=50, l=20, r=20),
-        legend=dict(orientation="h", y=1.1),
+        legend=dict(orientation="h", y=1.1, font=dict(size=12)),
         yaxis=dict(range=[0.5, 0.85], gridcolor="#f0f0f0"),
-        xaxis=dict(title=None),
+        xaxis=dict(title=None, tickfont=dict(size=12)),
         font=dict(family="Inter, sans-serif")
     )
 
